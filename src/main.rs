@@ -143,6 +143,25 @@ fn main() {
 
     builder.finish(&mut top);
 
+    builder = FunctionBuilder::new(
+        "bitcast_test".to_string(),
+        [],
+        [top.int32t()]
+    );
+
+    builder.i_ld_global_func("test1".to_string());
+    builder.i_bitcast(top.int32t());
+    builder.i_ld_int(1);
+    builder.i_iadd();
+    builder.i_bitcast(top.get_function("test2").unwrap().ty());
+    builder.i_call_indirect();
+    builder.i_return();
+    builder.finish(&mut top);
+
+    let mut s = String::new();
+    top.ir_print(&mut s).unwrap();
+    print!("{}", s);
+
     top.do_mut_pass(&mut Verifier{}).unwrap_or_else(|_e| panic!("Verify error {:?}", _e));
 
     let mut s = String::new();

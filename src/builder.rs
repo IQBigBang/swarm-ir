@@ -85,8 +85,8 @@ impl<'ctx> FunctionBuilder<'ctx> {
     }
 }
 
-impl<'ctx> InstrBuilder for FunctionBuilder<'ctx> {
-    fn instr(&mut self, i: InstrK) {
+impl<'ctx> InstrBuilder<'ctx> for FunctionBuilder<'ctx> {
+    fn instr(&mut self, i: InstrK<'ctx>) {
         let curr_block = self.current_block.into();
         self.blocks.get_mut(&curr_block).unwrap().body.push(
             Instr { kind: i, meta: Metadata::new() }
@@ -94,8 +94,8 @@ impl<'ctx> InstrBuilder for FunctionBuilder<'ctx> {
     }
 }
 
-pub trait InstrBuilder {
-    fn instr(&mut self, i: InstrK);
+pub trait InstrBuilder<'ctx> {
+    fn instr(&mut self, i: InstrK<'ctx>);
 
     fn i_ld_int(&mut self, val: i32) { self.instr(InstrK::LdInt(val)) }
     fn i_ld_float(&mut self, val: f32) { self.instr(InstrK::LdFloat(val)) }
@@ -117,6 +117,7 @@ pub trait InstrBuilder {
     fn i_ld_global_func(&mut self, func_name: String) { self.instr(InstrK::LdGlobalFunc { func_name }) }
     fn i_call_indirect(&mut self) { self.instr(InstrK::CallIndirect) }
     fn i_return(&mut self) { self.instr(InstrK::Return) }
+    fn i_bitcast(&mut self, target_type: Ty<'ctx>) { self.instr(InstrK::Bitcast { target: target_type }) }
 }
 
 /// A wrapper which acts as a reference to a local.

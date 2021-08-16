@@ -6,7 +6,9 @@ pub struct Verifier {}
 
 pub struct VerifierMutInfo<'ctx> {
     /// Types of the functions in CallIndirect instructions
-    call_indirect_function_types: HashMap<usize, Ty<'ctx>>
+    call_indirect_function_types: HashMap<usize, Ty<'ctx>>,
+    /// Types of the `from`s of BitCast instructions
+    bitcast_source_types: HashMap<usize, Ty<'ctx>>
 }
 
 impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
@@ -22,6 +24,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
         let mut stack = Vec::new();
 
         let mut call_indirect_function_types = HashMap::new();
+        let mut bitcast_source_types = HashMap::new();
 
         for (i, instr) in function.body().body.iter().enumerate() {
             match &instr.kind {
@@ -185,6 +188,20 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
 
                     call_indirect_function_types.insert(i, func);
                 },
+                InstrK::Bitcast { target } => {
+                    let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    match (&*val, &**target) {
+                        (Type::Int32, Type::Int32) | (Type::Int32, Type::Float32) |
+                        (Type::Float32, Type::Int32) | (Type::Float32, Type::Float32) |
+                        (Type::Int32, Type::Func { args: _, ret: _ }) | (Type::Float32, Type::Func { args: _, ret: _ }) |
+                        (Type::Func { args: _, ret: _ }, Type::Int32) | (Type::Func { args: _, ret: _ }, Type::Float32) |
+                        (Type::Func { args: _, ret: _ }, Type::Func { args: _, ret: _ }) => {
+                            // All these cases are OK!
+                            stack.push(*target);
+                        }
+                    }
+                    bitcast_source_types.insert(i, val);
+                }
             }
         }
 
@@ -194,7 +211,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
             _ => return Err(VerifyError::MissingReturn)
         }
 
-        Ok(VerifierMutInfo { call_indirect_function_types })
+        Ok(VerifierMutInfo { call_indirect_function_types, bitcast_source_types })
     }
 
     fn mutate_function(
@@ -209,6 +226,14 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                 debug_assert!(matches!(instr.kind, InstrK::CallIndirect));
 
                 instr.meta.insert_ty("ty", function_ty)
+            }
+            
+            if info.bitcast_source_types.contains_key(&i) {
+                let source_ty = info.bitcast_source_types[&i];
+
+                debug_assert!(matches!(instr.kind, InstrK::Bitcast { target: _ }));
+
+                instr.meta.insert_ty("from", source_ty)
             }
         }
 

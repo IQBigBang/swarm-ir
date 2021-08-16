@@ -130,6 +130,23 @@ impl<'ctx> WasmEmitter<'ctx> {
                         table: 0 // the GFT is the only one and it's at index zero
                     });
                 },
+                InstrK::Bitcast { target } => {
+                    // meta["from"] injected by the Verifier
+                    let from = instr.meta.retrieve_ty("from").unwrap();
+                    let from_wasm = Self::get_wasm_type(from);
+                    let to_wasm = Self::get_wasm_type(*target);
+                    match (from_wasm, to_wasm) {
+                        (wasm::ValType::I32, wasm::ValType::I32) | (wasm::ValType::F32, wasm::ValType::F32) => { /* no-op */ }
+                        (wasm::ValType::I32, wasm::ValType::F32) => {
+                            out_f.instruction(wasm::Instruction::F32ReinterpretI32);
+                        }
+                        (wasm::ValType::F32, wasm::ValType::I32) => {
+                            out_f.instruction(wasm::Instruction::I32ReinterpretF32);
+                        }
+                        /* We don't currently use other types (function "pointers" are implemented as I32) */
+                        _ => unimplemented!()
+                    }
+                }
             };
         }
 

@@ -2,7 +2,7 @@ use std::{collections::HashMap, hint::unreachable_unchecked};
 
 use crate::{metadata::Metadata, ty::{Ty, Type}};
 
-pub enum InstrK {
+pub enum InstrK<'ctx> {
     LdInt(i32),
     LdFloat(f32),
     IAdd,
@@ -24,7 +24,12 @@ pub enum InstrK {
     StLocal { idx: usize },
     LdGlobalFunc { func_name: String },
     CallIndirect,
-    Return
+    Return,
+    /// Cast a value to another type without any value conversions.
+    /// equivalent to `*((T*)&expr)` in C.
+    ///
+    /// Fails to verify if the target and source types are of different sizes.
+    Bitcast { target: Ty<'ctx> }
 }
 
 pub enum Cmp {
@@ -36,13 +41,13 @@ pub enum Cmp {
     Ge
 }
 
-pub struct Instr {
-    pub kind: InstrK,
+pub struct Instr<'ctx> {
+    pub kind: InstrK<'ctx>,
     pub(crate) meta: Metadata
 }
 
-impl Instr {
-    pub fn new(kind: InstrK) -> Self {
+impl<'ctx> Instr<'ctx> {
+    pub fn new(kind: InstrK<'ctx>) -> Self {
         Self { kind, meta: Metadata::new() }
     }
 }
@@ -67,7 +72,7 @@ pub struct InstrBlock<'ctx> {
     /// A unique index of the block inside a function.
     /// It's assigned by the builder and shouldn't be touched by the user
     pub(crate) idx: BlockId,
-    pub body: Vec<Instr>,
+    pub body: Vec<Instr<'ctx>>,
     /// Every block has a type - it's a function type with no arguments
 
     pub block_ty: Option<Ty<'ctx>>,
@@ -80,7 +85,7 @@ impl<'ctx> InstrBlock<'ctx> {
     }
     /// A helper function to avoid doing `block.body.push(Instr::new(SMTH))`.
     /// Instead you can just do block.add(SMTH)
-    pub fn add(&mut self, instr_k: InstrK) {
+    pub fn add(&mut self, instr_k: InstrK<'ctx>) {
         self.body.push(Instr::new(instr_k))
     }
 }
@@ -109,7 +114,7 @@ impl<'ctx> Function<'ctx> {
         #[cfg(debug_assertions)]
         {
             let args_types = match &*ty {
-                Type::Func { args, ret } => args,
+                Type::Func { args, ret: _ } => args,
                 _ => unsafe { unreachable_unchecked() }
             };
 
@@ -127,7 +132,7 @@ impl<'ctx> Function<'ctx> {
         &self.name
     }
 
-    pub fn body(&self) -> &InstrBlock {
+    pub fn body(&self) -> &InstrBlock<'ctx> {
         self.blocks.get(&0.into()).unwrap()
     }
 
@@ -135,11 +140,11 @@ impl<'ctx> Function<'ctx> {
         self.blocks.get_mut(&0.into()).unwrap()
     }
 
-    pub fn all_blocks_iter(&self) -> std::collections::hash_map::Values<'_, BlockId, InstrBlock> {
+    pub fn all_blocks_iter(&self) -> std::collections::hash_map::Values<'_, BlockId, InstrBlock<'ctx>> {
         self.blocks.values()
     }
 
-    pub fn get_block(&self, id: BlockId) -> Option<&InstrBlock> {
+    pub fn get_block(&self, id: BlockId) -> Option<&InstrBlock<'ctx>> {
         self.blocks.get(&id)
     }
 

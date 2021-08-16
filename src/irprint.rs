@@ -45,7 +45,7 @@ impl<'ctx> IRPrint for Ty<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result { self.as_ref().ir_print(w) }
 }
 
-impl IRPrint for Instr {
+impl<'ctx> IRPrint for Instr<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         match &self.kind {
             InstrK::LdInt(n) => write!(w, "ld.int {}", n),
@@ -82,6 +82,10 @@ impl IRPrint for Instr {
             InstrK::LdGlobalFunc { func_name } => write!(w, "ld_glob_func \"{}\"", func_name),
             InstrK::CallIndirect => write!(w, "call indirect"),
             InstrK::Return => write!(w, "return"),
+            InstrK::Bitcast { target } => {
+                write!(w, "bitcast to ")?;
+                target.ir_print(w)
+            }
         }?;
 
         if !self.meta.is_empty() {
