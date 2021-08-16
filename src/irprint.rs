@@ -1,0 +1,148 @@
+use crate::{instr::{BlockId, Cmp, Function, Instr, InstrBlock, InstrK}, module::Module, ty::{Ty, Type}};
+
+pub trait IRPrint {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result;
+}
+
+impl<'ctx> IRPrint for Type<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        match self {
+            Type::Int32 => write!(w, "int32"),
+            Type::Float32 => write!(w, "float32"),
+            Type::Func { args, ret: rets } => {
+                if args.is_empty() {
+                    write!(w, "() -> ")?;
+                } else {
+                    write!(w, "(")?;
+                    args[0].ir_print(w)?;
+                    for arg in args.iter().skip(1) {
+                        write!(w, ", ")?;
+                        arg.ir_print(w)?;
+                    }
+                    write!(w, ") -> ")?;
+                }
+
+                if rets.is_empty() {
+                    write!(w, "()")
+                } else if rets.len() == 1 {
+                    rets[0].ir_print(w) // no parantheses if there's only one return value
+                } else {
+                    write!(w, "(")?;
+                    rets[0].ir_print(w)?;
+                    for r in rets.iter().skip(1) {
+                        write!(w, ", ")?;
+                        r.ir_print(w)?;
+                    }
+                    write!(w, ")")
+                }
+            },
+        }
+    }
+}
+
+impl<'ctx> IRPrint for Ty<'ctx> {
+    #[inline]
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result { self.as_ref().ir_print(w) }
+}
+
+impl IRPrint for Instr {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        match &self.kind {
+            InstrK::LdInt(n) => write!(w, "ld.int {}", n),
+            InstrK::LdFloat(f) => write!(w, "ld.float {}", f),
+            InstrK::IAdd => write!(w, "iadd"),
+            InstrK::ISub => write!(w, "isub"),
+            InstrK::IMul => write!(w, "imul"),
+            InstrK::IDiv => write!(w, "idiv"),
+            InstrK::FAdd => write!(w, "fadd"),
+            InstrK::FSub => write!(w, "fsub"),
+            InstrK::FMul => write!(w, "fmul"),
+            InstrK::FDiv => write!(w, "fdiv"),
+            InstrK::Itof => write!(w, "itof"),
+            InstrK::ICmp(cmp) => match cmp {
+                Cmp::Eq => write!(w, "icmp.eq"),
+                Cmp::Ne => write!(w, "icmp.ne"),
+                Cmp::Lt => write!(w, "icmp.lt"),
+                Cmp::Le => write!(w, "icmp.le"),
+                Cmp::Gt => write!(w, "icmp.gt"),
+                Cmp::Ge => write!(w, "icmp.ge"),
+            },
+            InstrK::FCmp(cmp) => match cmp {
+                Cmp::Eq => write!(w, "fcmp.eq"),
+                Cmp::Ne => write!(w, "fcmp.ne"),
+                Cmp::Lt => write!(w, "fcmp.lt"),
+                Cmp::Le => write!(w, "fcmp.le"),
+                Cmp::Gt => write!(w, "fcmp.gt"),
+                Cmp::Ge => write!(w, "fcmp.ge"),
+            },
+            InstrK::CallDirect { func_name } => write!(w, "call \"{}\"", func_name),
+            InstrK::LdLocal { idx } => write!(w, "ld.loc #{}", idx),
+            InstrK::StLocal { idx } => write!(w, "st.loc #{}", idx),
+            InstrK::LdGlobalFunc { func_name } => write!(w, "ld_glob_func \"{}\"", func_name),
+            InstrK::CallIndirect => write!(w, "call indirect"),
+            InstrK::Return => write!(w, "return"),
+        }?;
+
+        if !self.meta.is_empty() {
+            write!(w, "  # ")?;
+            self.meta.ir_print(w)?;
+        }
+
+        writeln!(w)
+    }
+}
+
+impl<'ctx> IRPrint for InstrBlock<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        write!(w, "b{}:", Into::<usize>::into(self.idx))?;
+
+        if !self.meta.is_empty() {
+            write!(w, "  # ")?;
+            self.meta.ir_print(w)?;
+        }
+        writeln!(w)?;
+
+        for instr in &self.body {
+            write!(w, "  ")?; // indentation
+            instr.ir_print(w)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<'ctx> IRPrint for Function<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        write!(w, "func \"{}\" ", self.name())?;
+        self.ty().ir_print(w)?;
+        writeln!(w, " {{")?;
+
+        writeln!(w, "locals:")?;
+        for (loc_i, loc_ty) in self.all_locals_ty().iter().enumerate() {
+            write!(w, "  #{} ", loc_i)?;
+            loc_ty.ir_print(w)?;
+            writeln!(w)?;
+        }
+
+        // Now, sort all block indexes by number
+        // because they are stored in a HashMap and order is not guaranteed
+        let mut block_indexes: Vec<BlockId> = self.all_blocks_iter().map(|b| b.idx).collect();
+        block_indexes.sort();
+
+        for block_id in block_indexes {
+            self.get_block(block_id).unwrap().ir_print(w)?;
+        }
+
+        writeln!(w, "}}")?;
+        writeln!(w)
+    }
+}
+
+impl<'ctx> IRPrint for Module<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        for f in self.functions_iter() {
+            f.ir_print(w)?;
+        }
+        Ok(())
+    }
+}
