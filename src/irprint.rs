@@ -59,6 +59,7 @@ impl IRPrint for Instr {
             InstrK::FMul => write!(w, "fmul"),
             InstrK::FDiv => write!(w, "fdiv"),
             InstrK::Itof => write!(w, "itof"),
+            InstrK::Ftoi => write!(w, "ftoi"),
             InstrK::ICmp(cmp) => match cmp {
                 Cmp::Eq => write!(w, "icmp.eq"),
                 Cmp::Ne => write!(w, "icmp.ne"),

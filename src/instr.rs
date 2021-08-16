@@ -15,6 +15,8 @@ pub enum InstrK {
     FDiv,
     /// Convert an Int32 to Float32
     Itof,
+    /// Convert a Float32 to an Int32 by truncating
+    Ftoi,
     ICmp(Cmp),
     FCmp(Cmp),
     CallDirect { func_name: String },

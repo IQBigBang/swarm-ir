@@ -108,6 +108,7 @@ pub trait InstrBuilder {
     fn i_fmul(&mut self) { self.instr(InstrK::FMul) }
     fn i_fdiv(&mut self) { self.instr(InstrK::FDiv) }
     fn i_itof(&mut self) { self.instr(InstrK::Itof) }
+    fn i_ftoi(&mut self) { self.instr(InstrK::Ftoi) }
     fn i_icmp(&mut self, cmp: Cmp) { self.instr(InstrK::ICmp(cmp)) }
     fn i_fcmp(&mut self, cmp: Cmp) { self.instr(InstrK::FCmp(cmp)) }
     fn i_call(&mut self, func_name: String) { self.instr(InstrK::CallDirect { func_name }) }

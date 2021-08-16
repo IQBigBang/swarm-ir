@@ -92,6 +92,17 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                     }
                     stack.push(module.float32t())
                 }
+                InstrK::Ftoi => {
+                    let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !val.is_float() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.float32t(),
+                            actual: val,
+                            reason: "Itof instruction"
+                        })
+                    }
+                    stack.push(module.int32t())
+                }
                 InstrK::Return => {
                     //let val = stack.pop().ok_or(VerifyError::StackUnderflow)?
                     /* FIXME - "Return" changes the block, it does not actually return from a function */
