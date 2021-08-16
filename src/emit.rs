@@ -81,54 +81,54 @@ impl<'ctx> WasmEmitter<'ctx> {
 
         for instr in &func.body().body {
             match &instr.kind {
-                InstrK::LdInt(val) => out_f.instruction(wasm::Instruction::I32Const(*val)),
-                InstrK::LdFloat(val) => out_f.instruction(wasm::Instruction::F32Const(*val)),
-                InstrK::IAdd => out_f.instruction(wasm::Instruction::I32Add),
-                InstrK::ISub => out_f.instruction(wasm::Instruction::I32Sub),
-                InstrK::IMul => out_f.instruction(wasm::Instruction::I32Mul),
-                InstrK::IDiv => out_f.instruction(wasm::Instruction::I32DivS),
-                InstrK::FAdd => out_f.instruction(wasm::Instruction::F32Add),
-                InstrK::FSub => out_f.instruction(wasm::Instruction::F32Sub),
-                InstrK::FMul => out_f.instruction(wasm::Instruction::F32Mul),
-                InstrK::FDiv => out_f.instruction(wasm::Instruction::F32Div),
-                InstrK::Itof => out_f.instruction(wasm::Instruction::F32ConvertI32S),
-                InstrK::Ftoi => out_f.instruction(wasm::Instruction::I32TruncSatF32S),
-                InstrK::ICmp(cmp) => match cmp {
+                InstrK::LdInt(val) => { out_f.instruction(wasm::Instruction::I32Const(*val)); },
+                InstrK::LdFloat(val) => { out_f.instruction(wasm::Instruction::F32Const(*val)); },
+                InstrK::IAdd => { out_f.instruction(wasm::Instruction::I32Add); },
+                InstrK::ISub => { out_f.instruction(wasm::Instruction::I32Sub); },
+                InstrK::IMul => { out_f.instruction(wasm::Instruction::I32Mul); },
+                InstrK::IDiv => { out_f.instruction(wasm::Instruction::I32DivS); },
+                InstrK::FAdd => { out_f.instruction(wasm::Instruction::F32Add); },
+                InstrK::FSub => { out_f.instruction(wasm::Instruction::F32Sub); },
+                InstrK::FMul => { out_f.instruction(wasm::Instruction::F32Mul); },
+                InstrK::FDiv => { out_f.instruction(wasm::Instruction::F32Div); },
+                InstrK::Itof => { out_f.instruction(wasm::Instruction::F32ConvertI32S); },
+                InstrK::Ftoi => { out_f.instruction(wasm::Instruction::I32TruncSatF32S); },
+                InstrK::ICmp(cmp) => { match cmp {
                     Cmp::Eq => out_f.instruction(wasm::Instruction::I32Eq),
                     Cmp::Ne => out_f.instruction(wasm::Instruction::I32Neq),
                     Cmp::Lt => out_f.instruction(wasm::Instruction::I32LtS),
                     Cmp::Le => out_f.instruction(wasm::Instruction::I32LeS),
                     Cmp::Gt => out_f.instruction(wasm::Instruction::I32GtS),
                     Cmp::Ge => out_f.instruction(wasm::Instruction::I32GeS),
-                }
-                InstrK::FCmp(cmp) => match cmp {
+                }; }
+                InstrK::FCmp(cmp) => { match cmp {
                     Cmp::Eq => out_f.instruction(wasm::Instruction::F32Eq),
                     Cmp::Ne => out_f.instruction(wasm::Instruction::F32Neq),
                     Cmp::Lt => out_f.instruction(wasm::Instruction::F32Lt),
                     Cmp::Le => out_f.instruction(wasm::Instruction::F32Le),
                     Cmp::Gt => out_f.instruction(wasm::Instruction::F32Gt),
                     Cmp::Ge => out_f.instruction(wasm::Instruction::F32Ge),
-                }
+                }; }
                 InstrK::CallDirect { func_name } => {
                     let func_idx = module.get_function(func_name).unwrap().idx;
-                    out_f.instruction(wasm::Instruction::Call(func_idx.try_into().unwrap()))
+                    out_f.instruction(wasm::Instruction::Call(func_idx.try_into().unwrap()));
                 },
-                InstrK::Return => out_f.instruction(wasm::Instruction::Return),
-                InstrK::LdLocal { idx } => out_f.instruction(wasm::Instruction::LocalGet(*idx as u32)),
-                InstrK::StLocal { idx } => out_f.instruction(wasm::Instruction::LocalSet(*idx as u32)),
+                InstrK::Return => { out_f.instruction(wasm::Instruction::Return); },
+                InstrK::LdLocal { idx } => { out_f.instruction(wasm::Instruction::LocalGet(*idx as u32)); },
+                InstrK::StLocal { idx } => { out_f.instruction(wasm::Instruction::LocalSet(*idx as u32)); },
                 InstrK::LdGlobalFunc { func_name } => {
                     let func_idx = module.get_function(func_name).unwrap().idx;
                     // the index must be shifted by one - see the description of [`emit_global_function_table`]
-                    out_f.instruction(wasm::Instruction::I32Const((func_idx + 1).try_into().unwrap()))
+                    out_f.instruction(wasm::Instruction::I32Const((func_idx + 1).try_into().unwrap()));
                 },
                 InstrK::CallIndirect => {
-                    // this is injected by the Verifier
+                    // meta["ty"] injected by the Verifier
                     let function_ty = instr.meta.retrieve_ty("ty").unwrap();
                     println!("{:?}", function_ty);
                     out_f.instruction(wasm::Instruction::CallIndirect {
                         ty: self.function_types[&function_ty],
                         table: 0 // the GFT is the only one and it's at index zero
-                    })
+                    });
                 },
             };
         }
