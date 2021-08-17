@@ -116,7 +116,7 @@ pub trait InstrBuilder<'ctx> {
     fn i_st_local(&mut self, loc: LocalRef) { self.instr(InstrK::StLocal { idx: loc.into() }) }
     fn i_ld_global_func(&mut self, func_name: String) { self.instr(InstrK::LdGlobalFunc { func_name }) }
     fn i_call_indirect(&mut self) { self.instr(InstrK::CallIndirect) }
-    fn i_return(&mut self) { self.instr(InstrK::Return) }
+    fn i_end(&mut self) { self.instr(InstrK::End) }
     fn i_bitcast(&mut self, target_type: Ty<'ctx>) { self.instr(InstrK::Bitcast { target: target_type }) }
 }
 

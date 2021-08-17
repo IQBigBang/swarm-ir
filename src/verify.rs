@@ -106,7 +106,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                     }
                     stack.push(module.int32t())
                 }
-                InstrK::Return => {
+                /*InstrK::Return => {
                     //let val = stack.pop().ok_or(VerifyError::StackUnderflow)?
                     /* FIXME - "Return" changes the block, it does not actually return from a function */
                     if function.ret_tys() != &stack {
@@ -117,7 +117,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                             reason: "Function return"
                         })*/
                     }
-                },
+                },*/
                 InstrK::CallDirect { func_name } => {
                     match module.get_function(func_name) {
                         None => return Err(VerifyError::UndefinedFunctionCall {
@@ -202,13 +202,18 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                     }
                     bitcast_source_types.insert(i, val);
                 }
+                InstrK::End => {
+                    if i != function.body().body.len() - 1 {
+                        return Err(VerifyError::UnexpectedEndOfBlock)
+                    }
+                }
             }
         }
 
-        // also make sure the function ends with a return instruction
+        // also make sure the block ends with an End instruction
         match function.body().body.last() {
-            Some(Instr { meta: _, kind: InstrK::Return }) => {},
-            _ => return Err(VerifyError::MissingReturn)
+            Some(Instr { meta: _, kind: InstrK::End }) => {},
+            _ => return Err(VerifyError::UnexpectedEndOfBlock)
         }
 
         Ok(VerifierMutInfo { call_indirect_function_types, bitcast_source_types })
@@ -247,7 +252,7 @@ pub enum VerifyError<'ctx> {
     GeneralError,
     StackUnderflow,
     InvalidType { expected: Ty<'ctx>, actual: Ty<'ctx>, reason: &'static str },
-    MissingReturn,
+    UnexpectedEndOfBlock,
     UndefinedFunctionCall { func_name: String },
     OutOfBoundsLocalIndex,
     InvalidTypeCallIndirect

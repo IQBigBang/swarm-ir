@@ -56,7 +56,12 @@ pub enum InstrK<'ctx> {
     /// Call a function pointer on top of the stack.
     /// Pop arguments off the stack.
     CallIndirect,
-    Return,
+    /// Signifies the end of a block, __every block must end with this instruction__.
+    ///
+    /// At the end of a block, execution either:
+    /// * returns to the caller if this block is the main block of a function
+    /// * returns to the parent block
+    End,
     /// Cast a value to another type without any value conversions.
     /// equivalent to `*((T*)&expr)` in C.
     ///
@@ -172,8 +177,12 @@ impl<'ctx> Function<'ctx> {
         self.blocks.get_mut(&0.into()).unwrap()
     }
 
-    pub fn all_blocks_iter(&self) -> std::collections::hash_map::Values<'_, BlockId, InstrBlock<'ctx>> {
+    pub fn blocks_iter(&self) -> std::collections::hash_map::Values<'_, BlockId, InstrBlock<'ctx>> {
         self.blocks.values()
+    }
+
+    pub fn blocks_iter_mut(&mut self) -> std::collections::hash_map::ValuesMut<'_, BlockId, InstrBlock<'ctx>> {
+        self.blocks.values_mut()
     }
 
     pub fn get_block(&self, id: BlockId) -> Option<&InstrBlock<'ctx>> {

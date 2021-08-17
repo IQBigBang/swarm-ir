@@ -81,7 +81,7 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             InstrK::StLocal { idx } => write!(w, "st.loc #{}", idx),
             InstrK::LdGlobalFunc { func_name } => write!(w, "ld_glob_func \"{}\"", func_name),
             InstrK::CallIndirect => write!(w, "call indirect"),
-            InstrK::Return => write!(w, "return"),
+            InstrK::End => write!(w, "end"),
             InstrK::Bitcast { target } => {
                 write!(w, "bitcast to ")?;
                 target.ir_print(w)
@@ -131,7 +131,7 @@ impl<'ctx> IRPrint for Function<'ctx> {
 
         // Now, sort all block indexes by number
         // because they are stored in a HashMap and order is not guaranteed
-        let mut block_indexes: Vec<BlockId> = self.all_blocks_iter().map(|b| b.idx).collect();
+        let mut block_indexes: Vec<BlockId> = self.blocks_iter().map(|b| b.idx).collect();
         block_indexes.sort();
 
         for block_id in block_indexes {

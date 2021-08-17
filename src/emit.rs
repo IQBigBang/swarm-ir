@@ -113,7 +113,6 @@ impl<'ctx> WasmEmitter<'ctx> {
                     let func_idx = module.get_function(func_name).unwrap().idx;
                     out_f.instruction(wasm::Instruction::Call(func_idx.try_into().unwrap()));
                 },
-                InstrK::Return => { out_f.instruction(wasm::Instruction::Return); },
                 InstrK::LdLocal { idx } => { out_f.instruction(wasm::Instruction::LocalGet(*idx as u32)); },
                 InstrK::StLocal { idx } => { out_f.instruction(wasm::Instruction::LocalSet(*idx as u32)); },
                 InstrK::LdGlobalFunc { func_name } => {
@@ -146,10 +145,9 @@ impl<'ctx> WasmEmitter<'ctx> {
                         _ => unimplemented!()
                     }
                 }
+                InstrK::End => { out_f.instruction(wasm::Instruction::End); },
             };
         }
-
-        out_f.instruction(wasm::Instruction::End); // every function body must end with the End instr.
 
         // Then add to the sections
         // first the function section
