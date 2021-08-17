@@ -178,21 +178,13 @@ mod tests {
         let mut m = Module::new(WasmModuleConf::default());
         let mut meta = Metadata::new();
 
-        let i = m.int32t();
-        println!("{:?}", i);
-        println!("{:?}", meta);
-        //std::hint::black_box(&i);
         meta.insert_ty("int", m.int32t());
-        println!("{:?}", meta);
-        //meta.insert_ty("flt", m.float32t());
-        //meta.insert_ty("fun", m.intern_type(Type::Func { args: vec![m.int32t()], ret: vec![m.int32t()] }));
+        meta.insert_ty("flt", m.float32t());
+        meta.insert_ty("fun", m.intern_type(Type::Func { args: vec![m.int32t()], ret: vec![m.int32t()] }));
 
-        let j = meta.retrieve_ty("int");
-        println!("{:?}", meta);
-        println!("{:?}", j);
-        //assert_eq!(meta.retrieve_ty("int"), Some(m.int32t()));
-        //assert_eq!(meta.retrieve_ty("flt"), Some(m.float32t()));
-        //assert_eq!(meta.retrieve_ty("fun"), Some(m.intern_type(Type::Func { args: vec![m.int32t()], ret: vec![m.int32t()] })));
+        assert_eq!(meta.retrieve_ty("int"), Some(m.int32t()));
+        assert_eq!(meta.retrieve_ty("flt"), Some(m.float32t()));
+        assert_eq!(meta.retrieve_ty("fun"), Some(m.intern_type(Type::Func { args: vec![m.int32t()], ret: vec![m.int32t()] })));
     }
 
     #[test]

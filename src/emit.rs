@@ -124,7 +124,6 @@ impl<'ctx> WasmEmitter<'ctx> {
                 InstrK::CallIndirect => {
                     // meta["ty"] injected by the Verifier
                     let function_ty = instr.meta.retrieve_ty("ty").unwrap();
-                    println!("{:?}", function_ty);
                     out_f.instruction(wasm::Instruction::CallIndirect {
                         ty: self.function_types[&function_ty],
                         table: 0 // the GFT is the only one and it's at index zero
@@ -217,7 +216,6 @@ impl<'ctx> FunctionPass<'ctx> for WasmEmitter<'ctx> {
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> {
         // this must be done before visiting the functions
         self.encode_types(module);
-        println!("{:?}", self.function_types);
         Ok(())
     }
 
