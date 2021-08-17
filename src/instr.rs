@@ -3,26 +3,58 @@ use std::{collections::HashMap, hint::unreachable_unchecked};
 use crate::{metadata::Metadata, ty::{Ty, Type}};
 
 pub enum InstrK<'ctx> {
+    /// Load a constant integer value onto the stack
     LdInt(i32),
+    /// Load a constant floating-point value onto the stack
     LdFloat(f32),
+    /// Add two integers
     IAdd,
+    /// Subtract two integers
     ISub,
+    /// Multiply two integers
     IMul,
+    /// Signed divide two integers. The result is undefined if the divisor is zero
     IDiv,
+    /// Add two floating-point numbers.
+    ///
+    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fadd
     FAdd,
+    /// Subtract two floating-point numbers.
+    ///
+    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fsub
     FSub,
+    /// Multiply two floating-point numbers.
+    ///
+    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fmul
     FMul,
+    /// Divide two floating-point numbers.
+    ///
+    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fdiv
     FDiv,
-    /// Convert an Int32 to Float32
+    /// Convert a signed integer to a floating-point number.
+    ///
+    /// Compiles to the `f32.convert_i32_s` instruction.
     Itof,
-    /// Convert a Float32 to an Int32 by truncating
+    /// Convert a floating-point number to a signed integer.
+    ///
+    /// Compiles to the `i64.trunc_sat_f32_s` instruction. 
+    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-trunc-sat-s
     Ftoi,
+    /// Compare two signed integers. The result is an integer.
     ICmp(Cmp),
+    /// Compare two floating-point values. The result is an integer.
     FCmp(Cmp),
+    /// Call a global function by name.
+    /// Pop arguments off the stack.
     CallDirect { func_name: String },
+    /// Load the value of a local onto the stack
     LdLocal { idx: usize },
+    /// Store the value on top of the stack into a local
     StLocal { idx: usize },
+    /// Load a pointer to a global function onto the stack
     LdGlobalFunc { func_name: String },
+    /// Call a function pointer on top of the stack.
+    /// Pop arguments off the stack.
     CallIndirect,
     Return,
     /// Cast a value to another type without any value conversions.
