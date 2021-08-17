@@ -1,32 +1,31 @@
 use std::collections::HashMap;
 
-use crate::{instr::{Instr, InstrK}, pass::{MutableFunctionPass}, ty::{Ty, Type}};
+use crate::{instr::{BlockId, Instr, InstrBlock, InstrK}, pass::{MutableFunctionPass}, ty::{Ty, Type}};
 
 pub struct Verifier {}
 
 pub struct VerifierMutInfo<'ctx> {
     /// Types of the functions in CallIndirect instructions
-    call_indirect_function_types: HashMap<usize, Ty<'ctx>>,
+    call_indirect_function_types: HashMap<(BlockId, usize), Ty<'ctx>>,
     /// Types of the `from`s of BitCast instructions
-    bitcast_source_types: HashMap<usize, Ty<'ctx>>
+    bitcast_source_types: HashMap<(BlockId, usize), Ty<'ctx>>
 }
 
-impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
-    type Error = VerifyError<'ctx>;
-    type MutationInfo = VerifierMutInfo<'ctx>;
-
-    fn visit_function(
-        &mut self, 
+impl Verifier {
+    fn verify_block<'ctx>(
+        &self,
+        out_info: &mut VerifierMutInfo<'ctx>,
+        this_block_id: BlockId,
         module: &crate::module::Module<'ctx>,
-        function: &crate::instr::Function<'ctx>) -> Result<VerifierMutInfo<'ctx>, Self::Error> {
-        
+        function: &crate::instr::Function<'ctx>,
+        block: &InstrBlock<'ctx>
+    ) -> Result<(), VerifyError<'ctx>> {
+
         // We simulate and record the function stack types
+        // Every block starts with an empty stack (values can't be passed to blocks)
         let mut stack = Vec::new();
 
-        let mut call_indirect_function_types = HashMap::new();
-        let mut bitcast_source_types = HashMap::new();
-
-        for (i, instr) in function.body().body.iter().enumerate() {
+        for (i, instr) in block.body.iter().enumerate() {
             match &instr.kind {
                 InstrK::LdInt(_) => stack.push(module.int32t()),
                 InstrK::LdFloat(_) => stack.push(module.float32t()),
@@ -186,7 +185,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                         _ => return Err(VerifyError::InvalidTypeCallIndirect)
                     }
 
-                    call_indirect_function_types.insert(i, func);
+                    out_info.call_indirect_function_types.insert((this_block_id, i), func);
                 },
                 InstrK::Bitcast { target } => {
                     let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
@@ -200,10 +199,10 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
                             stack.push(*target);
                         }
                     }
-                    bitcast_source_types.insert(i, val);
+                    out_info.bitcast_source_types.insert((this_block_id, i), val);
                 }
                 InstrK::End => {
-                    if i != function.body().body.len() - 1 {
+                    if i != block.body.len() - 1 {
                         return Err(VerifyError::UnexpectedEndOfBlock)
                     }
                 }
@@ -211,12 +210,55 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
         }
 
         // also make sure the block ends with an End instruction
-        match function.body().body.last() {
+        match block.body.last() {
             Some(Instr { meta: _, kind: InstrK::End }) => {},
             _ => return Err(VerifyError::UnexpectedEndOfBlock)
         }
 
-        Ok(VerifierMutInfo { call_indirect_function_types, bitcast_source_types })
+        // at the end of the block, check if the types left on the stack
+        // agree with the block's type
+        if !stack.iter()
+            .zip(block.returns().into_iter())
+            .all(|(t1, t2)| *t1 == *t2) {
+            // if not all types are equal =>
+            return Err(VerifyError::InvalidBlockType {
+                block: this_block_id,
+                expected: block.returns().clone(),
+                actual: stack
+            })
+        }
+
+        Ok(())
+    }
+}
+
+impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
+    type Error = VerifyError<'ctx>;
+    type MutationInfo = VerifierMutInfo<'ctx>;
+
+    fn visit_function(
+        &mut self, 
+        module: &crate::module::Module<'ctx>,
+        function: &crate::instr::Function<'ctx>) -> Result<VerifierMutInfo<'ctx>, Self::Error> {
+
+        let mut info = VerifierMutInfo {
+            call_indirect_function_types: HashMap::new(),
+            bitcast_source_types: HashMap::new()
+        };
+        
+        for block in function.blocks_iter() {
+            self.verify_block(
+                &mut info,
+                block.idx,
+                module,
+                function,
+                block
+            )?
+        }
+
+        Ok(info)
+
+        // TODO: verify the main block's type is equal to the function's type
     }
 
     fn mutate_function(
@@ -224,22 +266,29 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
         function: &mut crate::instr::Function<'ctx>,
         info: VerifierMutInfo<'ctx>) -> Result<(), Self::Error> {
         
-        for (i, instr) in function.body_mut().body.iter_mut().enumerate() {
-            if info.call_indirect_function_types.contains_key(&i) {
-                let function_ty = info.call_indirect_function_types[&i];
+        for block in function.blocks_iter_mut() {
+            let block_id = block.idx;
 
-                debug_assert!(matches!(instr.kind, InstrK::CallIndirect));
+            for (i, instr) in block.body.iter_mut().enumerate() {
+                let key = (block_id, i);
 
-                instr.meta.insert_ty("ty", function_ty)
+                if info.call_indirect_function_types.contains_key(&key) {
+                    let function_ty = info.call_indirect_function_types[&key];
+    
+                    debug_assert!(matches!(instr.kind, InstrK::CallIndirect));
+    
+                    instr.meta.insert_ty("ty", function_ty)
+                }
+                
+                if info.bitcast_source_types.contains_key(&key) {
+                    let source_ty = info.bitcast_source_types[&key];
+    
+                    debug_assert!(matches!(instr.kind, InstrK::Bitcast { target: _ }));
+    
+                    instr.meta.insert_ty("from", source_ty)
+                }
             }
-            
-            if info.bitcast_source_types.contains_key(&i) {
-                let source_ty = info.bitcast_source_types[&i];
 
-                debug_assert!(matches!(instr.kind, InstrK::Bitcast { target: _ }));
-
-                instr.meta.insert_ty("from", source_ty)
-            }
         }
 
         Ok(())
@@ -255,5 +304,6 @@ pub enum VerifyError<'ctx> {
     UnexpectedEndOfBlock,
     UndefinedFunctionCall { func_name: String },
     OutOfBoundsLocalIndex,
-    InvalidTypeCallIndirect
+    InvalidTypeCallIndirect,
+    InvalidBlockType { block: BlockId, expected: Vec<Ty<'ctx>>, actual: Vec<Ty<'ctx>> }
 }

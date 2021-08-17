@@ -90,7 +90,7 @@ impl<'ctx> Instr<'ctx> {
 }
 
 #[repr(transparent)]
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub struct BlockId(usize);
 
 impl From<usize> for BlockId {
@@ -131,6 +131,17 @@ impl<'ctx> InstrBlock<'ctx> {
     /// Instead you can just do block.add(SMTH)
     pub fn add(&mut self, instr_k: InstrK<'ctx>) {
         self.body.push(Instr::new(instr_k))
+    }
+
+    pub fn full_type(&self) -> Ty<'ctx> {
+        self.block_ty
+    }
+
+    pub fn returns(&self) -> &Vec<Ty<'ctx>> {
+        match &*self.block_ty {
+            &Type::Func { args: _, ret } => &ret,
+            _ => unreachable!()
+        }
     }
 }
 
@@ -176,11 +187,11 @@ impl<'ctx> Function<'ctx> {
         &self.name
     }
 
-    pub fn body(&self) -> &InstrBlock<'ctx> {
+    pub fn entry_block(&self) -> &InstrBlock<'ctx> {
         self.blocks.get(&0.into()).unwrap()
     }
 
-    pub fn body_mut(&mut self) -> &mut InstrBlock<'ctx> {
+    pub fn entry_block_mut(&mut self) -> &mut InstrBlock<'ctx> {
         self.blocks.get_mut(&0.into()).unwrap()
     }
 
@@ -194,6 +205,10 @@ impl<'ctx> Function<'ctx> {
 
     pub fn get_block(&self, id: BlockId) -> Option<&InstrBlock<'ctx>> {
         self.blocks.get(&id)
+    }
+
+    pub fn get_block_mut(&self, id: BlockId) -> Option<&mut InstrBlock<'ctx>> {
+        self.blocks.get_mut(&id)
     }
 
     pub fn ret_tys(&self) -> &Vec<Ty<'ctx>> {
