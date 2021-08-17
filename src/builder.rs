@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::{instr::{BlockId, Cmp, Function, Instr, InstrBlock, InstrK}, metadata::Metadata, module::Module, ty::{Ty, Type}};
 
 pub struct FunctionBuilder<'ctx> {
-    blocks: HashMap<BlockId, InstrBlock<'ctx>>,
+    blocks: HashMap<BlockId, (Vec<Ty<'ctx>>, Vec<Instr<'ctx>>)>,
     next_block_id: usize,
     /// The index of the block currently being modified
     current_block: usize,
@@ -25,8 +25,11 @@ impl<'ctx> FunctionBuilder<'ctx> {
         arguments: impl IntoIterator<Item = Ty<'ctx>>, 
         returns: impl IntoIterator<Item = Ty<'ctx>>) -> Self {
 
-        let mut entry_block = InstrBlock::new();
-        entry_block.idx = 0.into();
+        let returns: Vec<_> = returns.into_iter().collect();
+
+        // The type of the block is what values it returns
+        // The main "entry" block returns the same values the function does
+        let entry_block = (returns.clone(), vec![]);
 
         let locals: Vec<_> = arguments.into_iter().collect();
 
@@ -40,7 +43,7 @@ impl<'ctx> FunctionBuilder<'ctx> {
             current_block: 0,
             argc: locals.len(),
             locals,
-            ret: returns.into_iter().collect(),
+            ret: returns,
             fname: func_name,
         }
     }
@@ -56,12 +59,12 @@ impl<'ctx> FunctionBuilder<'ctx> {
         LocalRef(self.locals.len() - 1)
     }
 
-    pub fn new_block(&mut self) -> BlockId {
-        let mut new_block = InstrBlock::new();
+    pub fn new_block(&mut self, returns: impl IntoIterator<Item = Ty<'ctx>>) -> BlockId {
         let new_block_id = self.next_block_id.into();
-        new_block.idx = new_block_id;
-        self.blocks.insert(new_block_id, new_block);
         self.next_block_id += 1;
+        let returns: Vec<_> = returns.into_iter().collect();
+        let new_block = (returns, vec![]);
+        self.blocks.insert(new_block_id, new_block);
         new_block_id
     }
 
@@ -72,13 +75,24 @@ impl<'ctx> FunctionBuilder<'ctx> {
 
     /// Finish building the current function and add it to the module
     pub fn finish(self, module: &mut Module<'ctx>) {
+        // Build the blocks
+        let mut blocks = HashMap::new();
+        for (id, (returns, mut instrs)) in self.blocks {
+            let block_ty = module.intern_type(Type::Func { args: vec![], ret: returns });
+            let mut block = InstrBlock::new(id, block_ty);
+            block.body.append(&mut instrs);
+
+            let x = blocks.insert(id, block);
+            debug_assert!(x.is_none()); // In debug builds, assert there are no two blocks with the same ID
+        }
+
         let func_ty = module.intern_type(
             Type::Func { args: self.locals[0..self.argc].iter().copied().collect(), ret: self.ret }
         );
         let func = Function::new(
             self.fname,
             func_ty,
-            self.blocks,
+            blocks,
             self.locals
         );
         module.add_function(func);
@@ -88,7 +102,7 @@ impl<'ctx> FunctionBuilder<'ctx> {
 impl<'ctx> InstrBuilder<'ctx> for FunctionBuilder<'ctx> {
     fn instr(&mut self, i: InstrK<'ctx>) {
         let curr_block = self.current_block.into();
-        self.blocks.get_mut(&curr_block).unwrap().body.push(
+        self.blocks.get_mut(&curr_block).unwrap().1.push(
             Instr { kind: i, meta: Metadata::new() }
         );
     }
