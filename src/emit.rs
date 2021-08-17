@@ -185,15 +185,15 @@ impl<'ctx> WasmEmitter<'ctx> {
             maximum: Some(table_length),
         });
 
+        let functions_indexes: Vec<_> = 
+            (0u32..(module.functions_iter().len() as u32)).collect();
+
         // An active element section initializes the table at start
-        let mut elements_vec = vec![wasm::Element::Null]; // the first element in the table (at index zero) is a null ref
-        elements_vec.extend(
-            (0..(table_length-1)).map(wasm::Element::Func));
         self.elem_sec.active(
             Some(0), 
-            wasm::Instruction::I32Const(0), 
+            wasm::Instruction::I32Const(1), // skip the first element 
             wasm::ValType::FuncRef, 
-            wasm::Elements::Expressions(&elements_vec));
+            wasm::Elements::Functions(&functions_indexes));
     }
 
     pub fn finish(mut self) -> Vec<u8> {
