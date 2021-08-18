@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::TryInto};
 
 use wasm_encoder as wasm;
 
-use crate::{instr::{Cmp, Function, InstrK}, module::Module, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{instr::{Cmp, Function, InstrBlock, InstrK}, module::Module, pass::FunctionPass, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx> {
     module: wasm::Module,
@@ -79,7 +79,24 @@ impl<'ctx> WasmEmitter<'ctx> {
         
         let mut out_f = wasm::Function::new(local_iter);
 
-        for instr in &func.body().body {
+        self.compile_block(
+            module, 
+            func, 
+            func.entry_block(), 
+            &mut out_f);
+
+        // Then add to the sections
+        // first the function section
+        self.func_sec.function(self.function_types[&func.ty()]);
+        // then the export section
+        // TODO: specify whether the function should be exported
+        self.export_sec.export(func.name(), wasm::Export::Function(func.idx as u32));
+        // then the code section
+        self.code_sec.function(&out_f);
+    }
+
+    fn compile_block(&mut self, module: &Module<'ctx>, function: &Function<'ctx>, block: &InstrBlock<'ctx>, out_f: &mut wasm::Function) {
+        for instr in &block.body {
             match &instr.kind {
                 InstrK::LdInt(val) => { out_f.instruction(wasm::Instruction::I32Const(*val)); },
                 InstrK::LdFloat(val) => { out_f.instruction(wasm::Instruction::F32Const(*val)); },
@@ -148,16 +165,7 @@ impl<'ctx> WasmEmitter<'ctx> {
                 InstrK::End => { out_f.instruction(wasm::Instruction::End); },
             };
         }
-
-        // Then add to the sections
-        // first the function section
-        self.func_sec.function(self.function_types[&func.ty()]);
-        // then the export section
-        // TODO: specify whether the function should be exported
-        self.export_sec.export(func.name(), wasm::Export::Function(func.idx as u32));
-        // then the code section
-        self.code_sec.function(&out_f);
-    }
+    } 
 
     fn emit_memory_section(&mut self, initial_memory_size: u32) {
         self.memory_sec.memory(wasm::MemoryType {

@@ -139,7 +139,7 @@ impl<'ctx> InstrBlock<'ctx> {
 
     pub fn returns(&self) -> &Vec<Ty<'ctx>> {
         match &*self.block_ty {
-            &Type::Func { args: _, ret } => &ret,
+            Type::Func { args: _, ret } => ret,
             _ => unreachable!()
         }
     }
@@ -207,7 +207,7 @@ impl<'ctx> Function<'ctx> {
         self.blocks.get(&id)
     }
 
-    pub fn get_block_mut(&self, id: BlockId) -> Option<&mut InstrBlock<'ctx>> {
+    pub fn get_block_mut(&mut self, id: BlockId) -> Option<&mut InstrBlock<'ctx>> {
         self.blocks.get_mut(&id)
     }
 
