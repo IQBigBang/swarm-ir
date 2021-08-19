@@ -83,7 +83,8 @@ impl<'ctx> WasmEmitter<'ctx> {
             module, 
             func, 
             func.entry_block(), 
-            &mut out_f);
+            &mut out_f,
+        true);
 
         // Then add to the sections
         // first the function section
@@ -95,7 +96,14 @@ impl<'ctx> WasmEmitter<'ctx> {
         self.code_sec.function(&out_f);
     }
 
-    fn compile_block(&mut self, module: &Module<'ctx>, function: &Function<'ctx>, block: &InstrBlock<'ctx>, out_f: &mut wasm::Function) {
+    fn compile_block(
+        &mut self, 
+        module: &Module<'ctx>, 
+        function: &Function<'ctx>, 
+        block: &InstrBlock<'ctx>, 
+        out_f: &mut wasm::Function,
+        // Some control flow constructs require the `end` to be emitted manually and/or in a different place
+        emit_end: bool) {
         for instr in &block.body {
             match &instr.kind {
                 InstrK::LdInt(val) => { out_f.instruction(wasm::Instruction::I32Const(*val)); },
@@ -162,7 +170,24 @@ impl<'ctx> WasmEmitter<'ctx> {
                         _ => unimplemented!()
                     }
                 }
-                InstrK::End => { out_f.instruction(wasm::Instruction::End); },
+                InstrK::End => { if emit_end { out_f.instruction(wasm::Instruction::End); } },
+                InstrK::IfElse { then, r#else } => {
+                    let then_block_type = function.get_block(*then).unwrap().full_type();
+                    let block_type = wasm::BlockType::FunctionType(self.function_types[&then_block_type]);
+                    out_f.instruction(wasm::Instruction::If(block_type));
+                    // compile the `then` block
+                    ///// the block already ends with `end`, we don't need to add it
+                    self.compile_block(module, function, function.get_block(*then).unwrap(), out_f, false);
+                    
+                    out_f.instruction(wasm::Instruction::Else);
+                    match r#else {
+                        Some(idx) =>
+                            self.compile_block(module, function, function.get_block(*idx).unwrap(), out_f, true),
+                        None => {
+                            out_f.instruction(wasm::Instruction::End);
+                        }
+                    }
+                }
             };
         }
     } 

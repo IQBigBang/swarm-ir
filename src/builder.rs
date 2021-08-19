@@ -132,6 +132,9 @@ pub trait InstrBuilder<'ctx> {
     fn i_call_indirect(&mut self) { self.instr(InstrK::CallIndirect) }
     fn i_end(&mut self) { self.instr(InstrK::End) }
     fn i_bitcast(&mut self, target_type: Ty<'ctx>) { self.instr(InstrK::Bitcast { target: target_type }) }
+    fn i_if_else(&mut self, then_block: BlockId, else_block: Option<BlockId>) {
+        self.instr(InstrK::IfElse { then: then_block, r#else: else_block })
+    }
 }
 
 /// A wrapper which acts as a reference to a local.

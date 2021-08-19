@@ -86,6 +86,13 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 write!(w, "bitcast to ")?;
                 target.ir_print(w)
             }
+            InstrK::IfElse { then, r#else } => {
+                write!(w, "if then b{}", then.id())?;
+                if let Some(else_block) = r#else {
+                    write!(w, " else b{}", else_block.id())?
+                }
+                Ok(())
+            }
         }?;
 
         if !self.meta.is_empty() {
@@ -99,7 +106,7 @@ impl<'ctx> IRPrint for Instr<'ctx> {
 
 impl<'ctx> IRPrint for InstrBlock<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
-        write!(w, "b{}:", Into::<usize>::into(self.idx))?;
+        write!(w, "b{}:", self.idx.id())?;
 
         if !self.meta.is_empty() {
             write!(w, "  # ")?;

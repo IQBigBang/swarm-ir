@@ -66,7 +66,10 @@ pub enum InstrK<'ctx> {
     /// equivalent to `*((T*)&expr)` in C.
     ///
     /// Fails to verify if the target and source types are of different sizes.
-    Bitcast { target: Ty<'ctx> }
+    Bitcast { target: Ty<'ctx> },
+    /// Pop a value off the stack. If the value is non-zero, jump
+    /// to the `then` block, otherwise jump to the `else` block (if there's one)
+    IfElse { then: BlockId, r#else: Option<BlockId> },
 }
 
 pub enum Cmp {
@@ -92,6 +95,13 @@ impl<'ctx> Instr<'ctx> {
 #[repr(transparent)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub struct BlockId(usize);
+
+impl BlockId {
+    #[inline]
+    pub fn id(&self) -> usize {
+        self.0
+    }
+}
 
 impl From<usize> for BlockId {
     fn from(n: usize) -> Self { BlockId(n) }

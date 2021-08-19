@@ -206,6 +206,50 @@ impl Verifier {
                         return Err(VerifyError::UnexpectedEndOfBlock)
                     }
                 }
+                InstrK::IfElse { then, r#else } => {
+                    // the condition
+                    let cond = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !cond.is_int() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.int32t(),
+                            actual: cond,
+                            reason: "If condition"
+                        })
+                    }
+                    // verify the block types are the same
+                    let then_block_returns = 
+                        function.get_block(*then)
+                        .ok_or(VerifyError::InvalidBlockId)?
+                        .returns();
+                    match r#else {
+                        Some(i) => {
+                            let else_block_returns = 
+                                function.get_block(*i)
+                                .ok_or(VerifyError::InvalidBlockId)?
+                                .returns();
+                            
+                            if then_block_returns != else_block_returns {
+                                return Err(VerifyError::InvalidBlockType {
+                                    block: *i,
+                                    expected: then_block_returns.clone(),
+                                    actual: else_block_returns.clone()
+                                })
+                            }
+                        }
+                        None => {
+                            /* if the else block is None, its' return is [] */
+                            if !then_block_returns.is_empty() {
+                                return Err(VerifyError::InvalidBlockType {
+                                    block: *then,
+                                    expected: vec![],
+                                    actual: then_block_returns.clone()
+                                })
+                            }
+                        }
+                    }
+                    // push the values onto the stack
+                    stack.extend_from_slice(then_block_returns);
+                }
             }
         }
 
@@ -218,7 +262,7 @@ impl Verifier {
         // at the end of the block, check if the types left on the stack
         // agree with the block's type
         if !stack.iter()
-            .zip(block.returns().into_iter())
+            .zip(block.returns().iter())
             .all(|(t1, t2)| *t1 == *t2) {
             // if not all types are equal =>
             return Err(VerifyError::InvalidBlockType {
@@ -305,5 +349,6 @@ pub enum VerifyError<'ctx> {
     UndefinedFunctionCall { func_name: String },
     OutOfBoundsLocalIndex,
     InvalidTypeCallIndirect,
-    InvalidBlockType { block: BlockId, expected: Vec<Ty<'ctx>>, actual: Vec<Ty<'ctx>> }
+    InvalidBlockType { block: BlockId, expected: Vec<Ty<'ctx>>, actual: Vec<Ty<'ctx>> },
+    InvalidBlockId,
 }
