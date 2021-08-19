@@ -9,6 +9,7 @@ impl<'ctx> IRPrint for Type<'ctx> {
         match self {
             Type::Int32 => write!(w, "int32"),
             Type::Float32 => write!(w, "float32"),
+            Type::Ptr => write!(w, "ptr"),
             Type::Func { args, ret: rets } => {
                 if args.is_empty() {
                     write!(w, "() -> ")?;

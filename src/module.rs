@@ -33,6 +33,7 @@ impl Default for WasmModuleConf {
 struct PrimitiveTypeCache<'ctx> {
     int32: Ty<'ctx>,
     float32: Ty<'ctx>,
+    ptr: Ty<'ctx>
 }
 
 impl<'ctx> Module<'ctx> {
@@ -40,7 +41,8 @@ impl<'ctx> Module<'ctx> {
         let mut type_ctx = Interner::new();
         let cache = PrimitiveTypeCache {
             int32: type_ctx.intern(Type::Int32),
-            float32: type_ctx.intern(Type::Float32)
+            float32: type_ctx.intern(Type::Float32),
+            ptr: type_ctx.intern(Type::Ptr)
         };
         Module {
             type_ctx/*: RefCell::new(type_ctx)*/,
@@ -89,6 +91,10 @@ impl<'ctx> Module<'ctx> {
 
     pub fn float32t(&self) -> Ty<'ctx> {
         self.primitive_types_cache.float32
+    }
+
+    pub fn ptr_t(&self) -> Ty<'ctx> {
+        self.primitive_types_cache.ptr
     }
 
     pub fn do_pass<P: FunctionPass<'ctx>>(&self, passer: &mut P) -> Result<(), P::Error> {

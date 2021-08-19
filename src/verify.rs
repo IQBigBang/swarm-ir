@@ -189,13 +189,11 @@ impl Verifier {
                 },
                 InstrK::Bitcast { target } => {
                     let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    #[allow(clippy::match_single_binding)]
                     match (&*val, &**target) {
-                        (Type::Int32, Type::Int32) | (Type::Int32, Type::Float32) |
-                        (Type::Float32, Type::Int32) | (Type::Float32, Type::Float32) |
-                        (Type::Int32, Type::Func { args: _, ret: _ }) | (Type::Float32, Type::Func { args: _, ret: _ }) |
-                        (Type::Func { args: _, ret: _ }, Type::Int32) | (Type::Func { args: _, ret: _ }, Type::Float32) |
-                        (Type::Func { args: _, ret: _ }, Type::Func { args: _, ret: _ }) => {
-                            // All these cases are OK!
+                        _ => {
+                            // All cases are OK, this might not be true in the future
+                            // that's why this match statement is here
                             stack.push(*target);
                         }
                     }

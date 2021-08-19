@@ -8,7 +8,8 @@ use crate::irprint::IRPrint;
 pub enum Type<'ctx> {
     Int32,
     Float32,
-    Func { args: Vec<Ty<'ctx>>, ret: Vec<Ty<'ctx>> }
+    Func { args: Vec<Ty<'ctx>>, ret: Vec<Ty<'ctx>> },
+    Ptr,
 }
 
 impl<'ctx> Type<'ctx> {
@@ -22,6 +23,10 @@ impl<'ctx> Type<'ctx> {
 
     pub fn is_func(&self) -> bool {
         matches!(self, Type::Func { args: _, ret: _ })
+    }
+
+    pub fn is_ptr(&self) -> bool {
+        matches!(self, Type::Ptr)
     }
 }
 

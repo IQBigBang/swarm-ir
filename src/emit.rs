@@ -64,6 +64,8 @@ impl<'ctx> WasmEmitter<'ctx> {
             Type::Int32 => wasm::ValType::I32,
             Type::Float32 => wasm::ValType::F32,
             Type::Func { args: _, ret: _ } => wasm::ValType::I32, /*wasm::ValType::FuncRef /* FIXME: not sure if this is correct */*/
+            // TODO: support 64-bit memory and pointers
+            Type::Ptr => wasm::ValType::I32
         }
     }
 
