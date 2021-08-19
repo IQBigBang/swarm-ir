@@ -153,6 +153,11 @@ impl<'ctx> InstrBlock<'ctx> {
             _ => unreachable!()
         }
     }
+
+    #[inline]
+    pub fn is_main(&self) -> bool {
+        self.idx == BlockId(0)
+    }
 }
 
 pub struct Function<'ctx> {

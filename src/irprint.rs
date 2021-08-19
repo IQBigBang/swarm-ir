@@ -104,6 +104,12 @@ impl<'ctx> IRPrint for Instr<'ctx> {
     }
 }
 
+impl IRPrint for BlockId {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        write!(w, "b{}", self.id())
+    }
+}
+
 impl<'ctx> IRPrint for InstrBlock<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         write!(w, "b{}:", self.idx.id())?;
