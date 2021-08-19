@@ -9,8 +9,8 @@ Prerequisites:
 
 1. Introduce an `if_else` instruction.
 It takes two arguments: `then: BlockIdx` and `else: Option<BlockIdx>`.
-The semantics: if the value popped of the stack is an integer one,
-transfer control flow to the *then* block. If it's an integer zero, transfer
+The semantics: if the value popped of the stack is a non-zero integer,
+transfer control flow to the *then* block. If it's zero, transfer
 to the *else* block, or to the next instruction if *else* is None.
 
 
