@@ -128,7 +128,10 @@ impl IRPrint for Metadata {
         while let Some(node) = current {
             write!(w, "{}: ", node.key)?;
             node.val.as_ir_print().ir_print(w)?;
-            write!(w, ", ")?;
+
+            if node.next.is_some() {
+                write!(w, ", ")?;
+            }
             current = &node.next;
         }
 
@@ -199,7 +202,7 @@ mod tests {
         assert_eq!(meta.ir_print(&mut out), Ok(()));
         assert_eq!(
             out,
-            "{greeting: Hello, world!, x: 12, }"
+            "{greeting: Hello, world!, x: 12}"
         )
     }
 }
