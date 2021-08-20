@@ -7,15 +7,16 @@ Prerequisites:
 ### Steps
 
 
-1. Introduce an `if_else` instruction.
+1. **DONE - commit c1e9ed56acaff32eeb57d37e8c977a6260be1e6d** 
+Introduce an `if_else` instruction.
 It takes two arguments: `then: BlockIdx` and `else: Option<BlockIdx>`.
 The semantics: if the value popped of the stack is a non-zero integer,
 transfer control flow to the *then* block. If it's zero, transfer
 to the *else* block, or to the next instruction if *else* is None.
 
 
-2. To ensure regular control flow (no goto-ish jumps), every block
-can appear as an argument to the `if_else` instruction zero or one times, except
+2. **DONE - commit 60b65ad498ddc92112b74b86a7d28f180618ee31** 
+To ensure regular control flow (no goto-ish jumps), every block can appear as an argument to the `if_else`, instruction zero or one times, except
 for the main block. Therefore, the blocks form a parent/child relationship, where every
 block (except for the main block) has exactly one parent block.
 
