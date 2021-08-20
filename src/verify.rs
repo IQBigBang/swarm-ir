@@ -11,8 +11,8 @@ pub struct VerifierMutInfo<'ctx> {
     bitcast_source_types: HashMap<(BlockId, usize), Ty<'ctx>>
 }
 
-impl Verifier {
-    fn verify_block<'ctx>(
+impl<'ctx> Verifier {
+    fn verify_block(
         &self,
         out_info: &mut VerifierMutInfo<'ctx>,
         this_block_id: BlockId,
@@ -249,6 +249,11 @@ impl Verifier {
                     stack.extend_from_slice(then_block_returns);
                 }
                 InstrK::Read { ty } => {
+                    if ty.is_struct() {
+                        return Err(VerifyError::UnexpectedStructType {
+                            r#where: "Read instruction"
+                        })
+                    }
                     let ptr = stack.pop().ok_or(VerifyError::StackUnderflow)?;
                     if !ptr.is_ptr() {
                         return Err(VerifyError::InvalidType { 
@@ -260,6 +265,11 @@ impl Verifier {
                     stack.push(*ty);
                 }
                 InstrK::Write { ty } => {
+                    if ty.is_struct() {
+                        return Err(VerifyError::UnexpectedStructType {
+                            r#where: "Read instruction"
+                        })
+                    }
                     let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
                     if val != *ty {
                         return Err(VerifyError::InvalidType {
@@ -321,6 +331,28 @@ impl Verifier {
 
         Ok(())
     }
+
+    /// Ensure that there are no arguments, return values, locals or block types with a bare `struct` type
+    fn verify_no_struct_types(&self, function: &crate::instr::Function<'ctx>) -> Result<(), VerifyError<'ctx>> {
+        for ty in function.all_locals_ty() {
+            if ty.is_struct() {
+                return Err(VerifyError::UnexpectedStructType { r#where: "Function local" })
+            }
+        }
+        for ty in function.ret_tys() {
+            if ty.is_struct() {
+                return Err(VerifyError::UnexpectedStructType { r#where: "Function return value" })
+            }
+        }
+        for block in function.blocks_iter() {
+            for ty in block.returns() {
+                if ty.is_struct() {
+                    return Err(VerifyError::UnexpectedStructType { r#where: "Block return value" })
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
@@ -336,6 +368,9 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
             call_indirect_function_types: HashMap::new(),
             bitcast_source_types: HashMap::new()
         };
+
+        // do this before verifying the blocks themselves
+        self.verify_no_struct_types(function)?;
         
         for block in function.blocks_iter() {
             self.verify_block(
@@ -398,4 +433,5 @@ pub enum VerifyError<'ctx> {
     InvalidTypeCallIndirect,
     InvalidBlockType { block: BlockId, expected: Vec<Ty<'ctx>>, actual: Vec<Ty<'ctx>> },
     InvalidBlockId,
+    UnexpectedStructType { r#where: &'static str },
 }
