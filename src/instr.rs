@@ -70,6 +70,11 @@ pub enum InstrK<'ctx> {
     /// Pop a value off the stack. If the value is non-zero, jump
     /// to the `then` block, otherwise jump to the `else` block (if there's one)
     IfElse { then: BlockId, r#else: Option<BlockId> },
+    /// Pop a pointer off the stack and read a value of this type at the address of the pointer
+    Read { ty: Ty<'ctx> },
+    /// Pop a value and a pointer off the stack and write the value
+    /// into memory at the address of the pointer
+    Write { ty: Ty<'ctx> }
 }
 
 pub enum Cmp {

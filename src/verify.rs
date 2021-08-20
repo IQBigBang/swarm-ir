@@ -248,6 +248,35 @@ impl Verifier {
                     // push the values onto the stack
                     stack.extend_from_slice(then_block_returns);
                 }
+                InstrK::Read { ty } => {
+                    let ptr = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !ptr.is_ptr() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.ptr_t(),
+                            actual: ptr,
+                            reason: "Read instruction"
+                        })
+                    }
+                    stack.push(*ty);
+                }
+                InstrK::Write { ty } => {
+                    let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if val != *ty {
+                        return Err(VerifyError::InvalidType {
+                            expected: *ty,
+                            actual: val,
+                            reason: "Write instruction"
+                        })
+                    }
+                    let ptr = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !ptr.is_ptr() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.ptr_t(),
+                            actual: ptr,
+                            reason: "Write instruction"
+                        })
+                    }
+                }
             }
         }
 

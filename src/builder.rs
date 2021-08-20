@@ -135,6 +135,8 @@ pub trait InstrBuilder<'ctx> {
     fn i_if_else(&mut self, then_block: BlockId, else_block: Option<BlockId>) {
         self.instr(InstrK::IfElse { then: then_block, r#else: else_block })
     }
+    fn i_read(&mut self, ty: Ty<'ctx>) { self.instr(InstrK::Read { ty }) }
+    fn i_write(&mut self, ty: Ty<'ctx>) { self.instr(InstrK::Write { ty }) }
 }
 
 /// A wrapper which acts as a reference to a local.

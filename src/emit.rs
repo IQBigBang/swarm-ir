@@ -190,6 +190,40 @@ impl<'ctx> WasmEmitter<'ctx> {
                         }
                     }
                 }
+                InstrK::Read { ty } => {
+                    let mem_arg = wasm::MemArg {
+                        offset: 0,
+                        align: 2, // the natural alignment of both i32 and f32 is 4 bytes = 2**2
+                        memory_index: 0,
+                    };
+
+                    match Self::get_wasm_type(*ty) {
+                        wasm::ValType::I32 => {
+                            out_f.instruction(wasm::Instruction::I32Load(mem_arg));
+                        },
+                        wasm::ValType::F32 => {
+                            out_f.instruction(wasm::Instruction::F32Load(mem_arg));
+                        },
+                        _ => unimplemented!()
+                    }
+                }
+                InstrK::Write { ty } => {
+                    let mem_arg = wasm::MemArg {
+                        offset: 0,
+                        align: 2, // the natural alignment of both i32 and f32 is 4 bytes = 2**2
+                        memory_index: 0,
+                    };
+
+                    match Self::get_wasm_type(*ty) {
+                        wasm::ValType::I32 => {
+                            out_f.instruction(wasm::Instruction::I32Store(mem_arg));
+                        },
+                        wasm::ValType::F32 => {
+                            out_f.instruction(wasm::Instruction::F32Store(mem_arg));
+                        },
+                        _ => unimplemented!()
+                    }
+                }
             };
         }
     } 

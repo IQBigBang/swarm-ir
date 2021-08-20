@@ -94,6 +94,14 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 }
                 Ok(())
             }
+            InstrK::Read { ty } => {
+                write!(w, "read ")?;
+                ty.ir_print(w)
+            }
+            InstrK::Write { ty } => {
+                write!(w, "write ")?;
+                ty.ir_print(w)
+            }
         }?;
 
         if !self.meta.is_empty() {
