@@ -185,7 +185,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::Read { ty } => {
                     let mem_arg = wasm::MemArg {
                         offset: 0,
-                        align: A::type_alignment(&A::compile_type(*ty)) as u32,
+                        align: A::type_alignment(*ty) as u32,
                         memory_index: 0,
                     };
 
@@ -202,7 +202,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::Write { ty } => {
                     let mem_arg = wasm::MemArg {
                         offset: 0,
-                        align: A::type_alignment(&A::compile_type(*ty)) as u32,
+                        align: A::type_alignment(*ty) as u32,
                         memory_index: 0,
                     };
 
@@ -224,7 +224,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     // IAdd
                     // but because the sizes are all powers of two, for optimization
                     // purposes we'll replace the multiplications with left-shifts:
-                    match A::type_sizeof(&A::compile_type(*ty)) {
+                    match A::type_sizeof(*ty) {
                         1 => {}, // no multiplication
                         2 => {
                             out_f.instruction(wasm::Instruction::I32Const(1));
