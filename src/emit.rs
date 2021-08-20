@@ -216,6 +216,36 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                         _ => unimplemented!()
                     }
                 }
+                InstrK::Offset { ty } => {
+                    // we need to calculate stack(0) * sizeof(ty) + stack(1)
+                    // the sequence we'll use is:
+                    // LdInt sizeof(ty)
+                    // IMul
+                    // IAdd
+                    // but because the sizes are all powers of two, for optimization
+                    // purposes we'll replace the multiplications with left-shifts:
+                    match A::type_sizeof(&A::compile_type(*ty)) {
+                        1 => {}, // no multiplication
+                        2 => {
+                            out_f.instruction(wasm::Instruction::I32Const(1));
+                            out_f.instruction(wasm::Instruction::I32Shl);
+                        }
+                        4 => {
+                            out_f.instruction(wasm::Instruction::I32Const(2));
+                            out_f.instruction(wasm::Instruction::I32Shl);
+                        }
+                        8 => {
+                            out_f.instruction(wasm::Instruction::I32Const(3));
+                            out_f.instruction(wasm::Instruction::I32Shl);
+                        }
+                        other => {
+                            out_f.instruction(wasm::Instruction::I32Const(other as i32));
+                            out_f.instruction(wasm::Instruction::I32Mul);
+                        }
+                    }
+                    // finally the `IAdd`
+                    out_f.instruction(wasm::Instruction::I32Add);
+                }
             };
         }
     } 

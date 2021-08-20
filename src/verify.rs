@@ -277,6 +277,26 @@ impl Verifier {
                         })
                     }
                 }
+                InstrK::Offset { ty } => {
+                    // Offset requires an integer and a pointer, pushes a pointer
+                    let num = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !num.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: module.int32t(),
+                            actual: num,
+                            reason: "Offset instruction"
+                        })
+                    }
+                    let ptr = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !ptr.is_ptr() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.ptr_t(),
+                            actual: ptr,
+                            reason: "Offset instruction"
+                        })
+                    }
+                    stack.push(module.ptr_t());
+                }
             }
         }
 

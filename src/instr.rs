@@ -74,7 +74,11 @@ pub enum InstrK<'ctx> {
     Read { ty: Ty<'ctx> },
     /// Pop a value and a pointer off the stack and write the value
     /// into memory at the address of the pointer
-    Write { ty: Ty<'ctx> }
+    Write { ty: Ty<'ctx> },
+    /// An operation to offset a pointer by an index as if it pointed to an array.
+    /// Pops an integer `n` off the stack  and a pointer `ptr` and pushes a pointer
+    /// whose address is equal to `(int)ptr + n * sizeof(T)`
+    Offset { ty: Ty<'ctx> },
 }
 
 pub enum Cmp {

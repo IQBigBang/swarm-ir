@@ -102,6 +102,10 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 write!(w, "write ")?;
                 ty.ir_print(w)
             }
+            InstrK::Offset { ty } => {
+                write!(w, "offset ")?;
+                ty.ir_print(w)
+            }
         }?;
 
         if !self.meta.is_empty() {

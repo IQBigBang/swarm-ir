@@ -137,6 +137,7 @@ pub trait InstrBuilder<'ctx> {
     }
     fn i_read(&mut self, ty: Ty<'ctx>) { self.instr(InstrK::Read { ty }) }
     fn i_write(&mut self, ty: Ty<'ctx>) { self.instr(InstrK::Write { ty }) }
+    fn i_offset(&mut self, ty: Ty<'ctx>) { self.instr(InstrK::Offset { ty }) }
 }
 
 /// A wrapper which acts as a reference to a local.
