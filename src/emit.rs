@@ -1,12 +1,12 @@
-use std::{collections::HashMap, convert::TryInto};
+use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{instr::{Cmp, Function, InstrBlock, InstrK}, module::Module, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::Module, pass::FunctionPass, ty::{Ty, Type}};
 
-pub struct WasmEmitter<'ctx> {
+pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
-    /// A table of function types and their indexes in the result wasm module
+    /// A table of function types and their indexes in the resulting wasm module
     function_types: HashMap<Ty<'ctx>, u32>,
 
     /* Follow the sections. Because the Wasm specification requires a certain order,
@@ -24,10 +24,12 @@ pub struct WasmEmitter<'ctx> {
     /// Defines the elements of the global function table
     elem_sec: wasm::ElementSection,
     /// Defines the actual code of the functions
-    code_sec: wasm::CodeSection
+    code_sec: wasm::CodeSection,
+    _ph: PhantomData<A>
 }
 
-impl<'ctx> WasmEmitter<'ctx> {
+// The Abi must be wasm-compatible, therefore the type specification
+impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         WasmEmitter {
@@ -41,6 +43,7 @@ impl<'ctx> WasmEmitter<'ctx> {
             export_sec: wasm::ExportSection::new(),
             elem_sec: wasm::ElementSection::new(),
             code_sec: wasm::CodeSection::new(),
+            _ph: PhantomData
         }
     }
 
@@ -48,24 +51,13 @@ impl<'ctx> WasmEmitter<'ctx> {
         for ty in module.all_types_iter() {
             if let Type::Func { args, ret } = &*ty {
                 self.type_sec.function(
-                    args.iter().map(|t| Self::get_wasm_type(*t)),
-                    ret.iter().map(|t| Self::get_wasm_type(*t)) 
+                    args.iter().map(|t| A::compile_type(*t)),
+                    ret.iter().map(|t| A::compile_type(*t)) 
                 );
                 // The function type is the last one
                 let idx = self.type_sec.len() - 1;
                 self.function_types.insert(ty, idx);
             }
-        }
-    }
-
-    // Not using &self prevents borrow errors, and we don't actually need t
-    fn get_wasm_type(ty: Ty<'ctx>) -> wasm::ValType {
-        match &*ty {
-            Type::Int32 => wasm::ValType::I32,
-            Type::Float32 => wasm::ValType::F32,
-            Type::Func { args: _, ret: _ } => wasm::ValType::I32, /*wasm::ValType::FuncRef /* FIXME: not sure if this is correct */*/
-            // TODO: support 64-bit memory and pointers
-            Type::Ptr => wasm::ValType::I32
         }
     }
 
@@ -77,7 +69,7 @@ impl<'ctx> WasmEmitter<'ctx> {
             .zip(
                 func.all_locals_ty().iter()
                 .skip(func.arg_count())
-                .map(|t| Self::get_wasm_type(*t)));
+                .map(|t| A::compile_type(*t)));
         
         let mut out_f = wasm::Function::new(local_iter);
 
@@ -158,8 +150,8 @@ impl<'ctx> WasmEmitter<'ctx> {
                 InstrK::Bitcast { target } => {
                     // meta["from"] injected by the Verifier
                     let from = instr.meta.retrieve_ty("from").unwrap();
-                    let from_wasm = Self::get_wasm_type(from);
-                    let to_wasm = Self::get_wasm_type(*target);
+                    let from_wasm = A::compile_type(from);
+                    let to_wasm = A::compile_type(*target);
                     match (from_wasm, to_wasm) {
                         (wasm::ValType::I32, wasm::ValType::I32) | (wasm::ValType::F32, wasm::ValType::F32) => { /* no-op */ }
                         (wasm::ValType::I32, wasm::ValType::F32) => {
@@ -193,11 +185,11 @@ impl<'ctx> WasmEmitter<'ctx> {
                 InstrK::Read { ty } => {
                     let mem_arg = wasm::MemArg {
                         offset: 0,
-                        align: 2, // the natural alignment of both i32 and f32 is 4 bytes = 2**2
+                        align: A::type_alignment(&A::compile_type(*ty)) as u32,
                         memory_index: 0,
                     };
 
-                    match Self::get_wasm_type(*ty) {
+                    match A::compile_type(*ty) {
                         wasm::ValType::I32 => {
                             out_f.instruction(wasm::Instruction::I32Load(mem_arg));
                         },
@@ -210,11 +202,11 @@ impl<'ctx> WasmEmitter<'ctx> {
                 InstrK::Write { ty } => {
                     let mem_arg = wasm::MemArg {
                         offset: 0,
-                        align: 2, // the natural alignment of both i32 and f32 is 4 bytes = 2**2
+                        align: A::type_alignment(&A::compile_type(*ty)) as u32,
                         memory_index: 0,
                     };
 
-                    match Self::get_wasm_type(*ty) {
+                    match A::compile_type(*ty) {
                         wasm::ValType::I32 => {
                             out_f.instruction(wasm::Instruction::I32Store(mem_arg));
                         },
@@ -277,7 +269,7 @@ impl<'ctx> WasmEmitter<'ctx> {
     }
 }
 
-impl<'ctx> FunctionPass<'ctx> for WasmEmitter<'ctx> {
+impl<'ctx, A: Abi<BackendType = wasm::ValType>> FunctionPass<'ctx> for WasmEmitter<'ctx, A> {
     type Error = (); // TODO some error
 
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> {
