@@ -37,6 +37,16 @@ impl<'ctx> IRPrint for Type<'ctx> {
                     write!(w, ")")
                 }
             },
+            Type::Struct { fields} => {
+                write!(w, "struct{{")?;
+                for (i, field) in fields.iter().enumerate() {
+                    if i != 0 {
+                        write!(w, ", ")?;
+                    }
+                    field.ir_print(w)?;
+                }
+                write!(w, "}}")
+            }
         }
     }
 }

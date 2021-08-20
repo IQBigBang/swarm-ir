@@ -33,7 +33,8 @@ impl Abi for Wasm32Abi {
             // Function "types" are actually integer indexes into the global function table
             Type::Func { args: _, ret: _ } => wasm::ValType::I32,
             // TODO: support 64-bit memory and pointers
-            Type::Ptr => wasm::ValType::I32
+            Type::Ptr => wasm::ValType::I32,
+            _ => todo!()
         }
     }
 
@@ -45,6 +46,7 @@ impl Abi for Wasm32Abi {
             Type::Func { args:_, ret:_ } => 4,
             // same as above
             Type::Ptr => 4,
+            _ => todo!()
         }
     }
 
@@ -54,6 +56,7 @@ impl Abi for Wasm32Abi {
             Type::Float32 => 2,
             Type::Func { args:_, ret:_ } => 2,
             Type::Ptr => 2,
+            _ => todo!()
         }
     }
 }

@@ -10,6 +10,7 @@ pub enum Type<'ctx> {
     Float32,
     Func { args: Vec<Ty<'ctx>>, ret: Vec<Ty<'ctx>> },
     Ptr,
+    Struct { fields: Vec<Ty<'ctx>> }
 }
 
 impl<'ctx> Type<'ctx> {
@@ -27,6 +28,10 @@ impl<'ctx> Type<'ctx> {
 
     pub fn is_ptr(&self) -> bool {
         matches!(self, Type::Ptr)
+    }
+
+    pub fn is_struct(&self) -> bool {
+        matches!(self, Type::Struct { fields: _ })
     }
 }
 
