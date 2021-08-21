@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, InstrK}, pass::{MutableFunctionPass}};
+use crate::{instr::{BlockId, Instr, InstrK}, pass::{MutableFunctionPass}};
 
 pub struct ControlFlowVerifier {}
 
@@ -18,7 +18,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
 
     fn visit_function(
         &mut self, 
-        module: &crate::module::Module<'ctx>,
+        _module: &crate::module::Module<'ctx>,
         function: &crate::instr::Function<'ctx>) -> Result<Self::MutationInfo, Self::Error> {
         
         // For every block, save its parent (where it appears)
@@ -79,6 +79,10 @@ impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
         for block in function.blocks_iter_mut() {
             if block_parents.contains_key(&block.idx) {
                 block.meta.insert("parent", block_parents[&block.idx]);
+            
+                // also add the "parent" information to the `end` instruction
+                assert!(matches!(block.body.last(), Some(Instr { kind: InstrK::End, meta: _ })));
+                block.body.last_mut().unwrap().meta.insert("parent", block_parents[&block.idx]);
             }
         }
 
