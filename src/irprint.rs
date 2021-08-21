@@ -116,6 +116,10 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 write!(w, "offset ")?;
                 ty.ir_print(w)
             }
+            InstrK::GetFieldPtr { struct_ty, field_idx } => {
+                write!(w, "get_field_ptr {} ", field_idx)?;
+                struct_ty.ir_print(w)
+            }
         }?;
 
         if !self.meta.is_empty() {

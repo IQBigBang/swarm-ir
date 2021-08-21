@@ -79,6 +79,9 @@ pub enum InstrK<'ctx> {
     /// Pops an integer `n` off the stack  and a pointer `ptr` and pushes a pointer
     /// whose address is equal to `(int)ptr + n * sizeof(T)`
     Offset { ty: Ty<'ctx> },
+    /// Pop a pointer off the stack which points to `struct_ty`
+    /// and push back a pointer which points to the Nth field of the struct
+    GetFieldPtr { struct_ty: Ty<'ctx>, field_idx: usize },
 }
 
 pub enum Cmp {

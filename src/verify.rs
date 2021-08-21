@@ -307,6 +307,30 @@ impl<'ctx> Verifier {
                     }
                     stack.push(module.ptr_t());
                 }
+                InstrK::GetFieldPtr { struct_ty, field_idx } => {
+                    // Verify the type is, in fact, a struct type
+                    if !struct_ty.is_struct() {
+                        return Err(VerifyError::GetFieldPtrExpectedStructType)
+                    }
+                    // Verify the index doesn't point out of bounds
+                    let struct_field_count = match &**struct_ty {
+                        Type::Struct { fields } => fields.len(),
+                        _ => unreachable!()
+                    };
+                    if *field_idx > struct_field_count {
+                        return Err(VerifyError::OutOfBoundsStructIndex)
+                    }
+                    // Verify there's a pointer type on stack
+                    let ptr = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !ptr.is_ptr() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.ptr_t(),
+                            actual: ptr,
+                            reason: "Offset instruction"
+                        })
+                    }
+                    stack.push(module.ptr_t());
+                }
             }
         }
 
@@ -434,4 +458,6 @@ pub enum VerifyError<'ctx> {
     InvalidBlockType { block: BlockId, expected: Vec<Ty<'ctx>>, actual: Vec<Ty<'ctx>> },
     InvalidBlockId,
     UnexpectedStructType { r#where: &'static str },
+    GetFieldPtrExpectedStructType,
+    OutOfBoundsStructIndex
 }

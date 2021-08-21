@@ -222,7 +222,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     // LdInt sizeof(ty)
                     // IMul
                     // IAdd
-                    // but because the sizes are all powers of two, for optimization
+                    // but because the sizes are often powers of two, for optimization
                     // purposes we'll replace the multiplications with left-shifts:
                     match A::type_sizeof(*ty) {
                         1 => {}, // no multiplication
@@ -246,6 +246,19 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     // finally the `IAdd`
                     out_f.instruction(wasm::Instruction::I32Add);
                 }
+                InstrK::GetFieldPtr { struct_ty, field_idx } => {
+                    // The `GetFieldPtr` instruction is basically
+                    // just an addition with a correct offset
+                    // Calculate the offset
+                    let struct_fields = match &**struct_ty {
+                        Type::Struct { fields } => fields,
+                        _ => unreachable!()
+                    };
+                    let field_offset = A::struct_field_offset(struct_fields, *field_idx);
+                    // emit the addition
+                    out_f.instruction(wasm::Instruction::I32Const(field_offset as i32));
+                    out_f.instruction(wasm::Instruction::I32Add);
+                },
             };
         }
     } 
