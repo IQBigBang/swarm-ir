@@ -2,6 +2,7 @@ use std::{collections::HashMap, hint::unreachable_unchecked};
 
 use crate::{metadata::Metadata, ty::{Ty, Type}};
 
+#[derive(PartialEq, Debug, Clone)]
 pub enum InstrK<'ctx> {
     /// Load a constant integer value onto the stack
     LdInt(i32),
@@ -17,19 +18,19 @@ pub enum InstrK<'ctx> {
     IDiv,
     /// Add two floating-point numbers.
     ///
-    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fadd
+    /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-fadd>
     FAdd,
     /// Subtract two floating-point numbers.
     ///
-    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fsub
+    /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-fsub>
     FSub,
     /// Multiply two floating-point numbers.
     ///
-    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fmul
+    /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-fmul>
     FMul,
     /// Divide two floating-point numbers.
     ///
-    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-fdiv
+    /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-fdiv>
     FDiv,
     /// Convert a signed integer to a floating-point number.
     ///
@@ -38,7 +39,7 @@ pub enum InstrK<'ctx> {
     /// Convert a floating-point number to a signed integer.
     ///
     /// Compiles to the `i64.trunc_sat_f32_s` instruction. 
-    /// For precise semantics, see https://webassembly.github.io/spec/core/exec/numerics.html#op-trunc-sat-s
+    /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-trunc-sat-s>
     Ftoi,
     /// Compare two signed integers. The result is an integer.
     ICmp(Cmp),
@@ -84,6 +85,7 @@ pub enum InstrK<'ctx> {
     GetFieldPtr { struct_ty: Ty<'ctx>, field_idx: usize },
 }
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Cmp {
     Eq,
     Ne,

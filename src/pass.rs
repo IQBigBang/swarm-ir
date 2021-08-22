@@ -3,7 +3,7 @@ use crate::{instr::Function, module::Module};
 pub trait FunctionPass<'ctx> {
     type Error;
 
-    /// Start visiting the module. Called before any [`visit_function`].
+    /// Start visiting the module. Called before any [`Self::visit_function`].
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
 
     /// Visit a function in a module.
@@ -21,12 +21,12 @@ pub trait MutableFunctionPass<'ctx> {
     /// The error type
     type Error;
     /// The internal information used by the Pass
-    /// to mutate the function. It is produced by the [`visit_function`] function which has immutable access
-    /// to both the function AND the module and consumed by the [`mutate_function`] function, which only
+    /// to mutate the function. It is produced by the [`Self::visit_function`] function which has immutable access
+    /// to both the function AND the module and consumed by the [`Self::mutate_function`] function, which only
     /// has mutable access to the function.
     type MutationInfo;
 
-    /// Start visiting the module. Called before any [`visit_function`].
+    /// Start visiting the module. Called before any [`Self::visit_function`].
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
 
     /// Visit a function in a module.
@@ -35,7 +35,7 @@ pub trait MutableFunctionPass<'ctx> {
         module: &Module<'ctx>,
         function: &Function<'ctx>) -> Result<Self::MutationInfo, Self::Error>;
     
-    /// Mutate the function. Invoked after every [`visit_function`] call with the information.
+    /// Mutate the function. Invoked after every [`Self::visit_function`] call with the information.
     fn mutate_function(
         &mut self,
         function: &mut Function<'ctx>,
