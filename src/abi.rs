@@ -103,11 +103,11 @@ fn struct_calc_algorithm<A: Abi>(struct_fields: &[Ty<'_>]) -> (Vec<usize>, usize
 
 #[cfg(test)]
 mod tests {
-    use crate::{abi::{Abi, Wasm32Abi}, module::Module, ty::{Ty, Type}};
+    use crate::{abi::{Abi, Wasm32Abi}, module::{Module, WasmModuleConf}, ty::{Ty, Type}};
 
     #[test]
     pub fn struct_test() {
-        let mut m = Module::new(crate::WasmModuleConf::default());
+        let mut m = Module::new(WasmModuleConf::default());
 
         let struct_t1 = m.intern_type(Type::Struct { fields: vec![
             m.int32t(), m.int32t()
