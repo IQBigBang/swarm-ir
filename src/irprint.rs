@@ -120,7 +120,8 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 write!(w, "get_field_ptr {} ", field_idx)?;
                 struct_ty.ir_print(w)
             }
-            InstrK::Discard => write!(w, "discard")
+            InstrK::Discard => write!(w, "discard"),
+            InstrK::Return => write!(w, "return"),
         }?;
 
         if !self.meta.is_empty() {

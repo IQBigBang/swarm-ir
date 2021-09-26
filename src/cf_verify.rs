@@ -81,8 +81,14 @@ impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
                 block.meta.insert("parent", block_parents[&block.idx]);
             
                 // also add the "parent" information to the `end` instruction
-                assert!(matches!(block.body.last(), Some(Instr { kind: InstrK::End, meta: _ })));
-                block.body.last_mut().unwrap().meta.insert("parent", block_parents[&block.idx]);
+                match block.body.last().unwrap().kind {
+                    InstrK::End => {
+                        block.body.last_mut().unwrap().meta.insert("parent", block_parents[&block.idx]);
+                    }
+                    // don't add the parent information to 'return'
+                    InstrK::Return => {}
+                    _ => panic!()
+                }
             }
         }
 

@@ -263,6 +263,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     }
                 },
                 InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
+                InstrK::Return => { out_f.instruction(wasm::Instruction::Return); }
             };
         }
     } 

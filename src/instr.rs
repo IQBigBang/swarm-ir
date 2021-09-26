@@ -57,7 +57,7 @@ pub enum InstrK<'ctx> {
     /// Call a function pointer on top of the stack.
     /// Pop arguments off the stack.
     CallIndirect,
-    /// Signifies the end of a block, __every block must end with this instruction__.
+    /// Signifies the end of a block, __every block must end with either this instruction or Return__.
     ///
     /// At the end of a block, execution either:
     /// * returns to the caller if this block is the main block of a function
@@ -84,7 +84,13 @@ pub enum InstrK<'ctx> {
     /// and push back a pointer which points to the Nth field of the struct
     GetFieldPtr { struct_ty: Ty<'ctx>, field_idx: usize },
     /// Pop a value off the stack and discard it
-    Discard
+    Discard,
+    /// Return immediately from the current function.
+    ///
+    /// The stack must contain _exactly_ the number of values the function returns.
+    ///
+    /// This instruction terminates a block, it shouldn't be followed by any more instructions.
+    Return,
 }
 
 #[repr(C)]

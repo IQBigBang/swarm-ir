@@ -105,18 +105,6 @@ impl<'ctx> Verifier {
                     }
                     stack.push(module.int32t())
                 }
-                /*InstrK::Return => {
-                    //let val = stack.pop().ok_or(VerifyError::StackUnderflow)?
-                    /* FIXME - "Return" changes the block, it does not actually return from a function */
-                    if function.ret_tys() != &stack {
-                        return Err(VerifyError::GeneralError);
-                        /*return Err(VerifyError::InvalidType { 
-                            expected: function.ret_ty(),
-                            actual: val,
-                            reason: "Function return"
-                        })*/
-                    }
-                },*/
                 InstrK::CallDirect { func_name } => {
                     match module.get_function(func_name) {
                         None => return Err(VerifyError::UndefinedFunctionCall {
@@ -334,6 +322,21 @@ impl<'ctx> Verifier {
                 InstrK::Discard => {
                     if stack.pop().is_none() {
                         return Err(VerifyError::StackUnderflow);
+                    }
+                }
+                InstrK::Return => {
+                    if stack.len() != function.ret_count() {
+                        return Err(VerifyError::StackUnderflow); // TODO return correct error
+                    }
+                    for i in (stack.len()-1)..=0 {
+                        let on_stack_type = stack.pop().unwrap();
+                        if on_stack_type != function.ret_tys()[i] {
+                            return Err(VerifyError::InvalidType {
+                                expected: function.ret_tys()[i],
+                                actual: on_stack_type,
+                                reason: "Return instruction",
+                            })
+                        }
                     }
                 }
             }

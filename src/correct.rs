@@ -29,10 +29,10 @@ impl<'ctx> MutableFunctionPass<'ctx> for CorrectionPass {
         info: Self::MutationInfo) -> Result<(), Self::Error> {
         
         for block in function.blocks_iter_mut() {
-            if let Some(Instr {
-                kind: InstrK::End,
-                meta: _
-            }) = block.body.last() {/* Everything's OK */}
+            if block.body.last().map(|i| i.kind == InstrK::End || i.kind == InstrK::Return).unwrap_or(false) {
+                /* The block ends with End or Return, 
+                Everything's OK */
+            }
             else {
                 block.add(InstrK::End)
             } 

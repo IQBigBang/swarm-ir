@@ -142,6 +142,7 @@ pub trait InstrBuilder<'ctx> {
         self.instr(InstrK::GetFieldPtr { struct_ty, field_idx });
     }
     fn i_discard(&mut self) { self.instr(InstrK::Discard) }
+    fn i_return(&mut self) { self.instr(InstrK::Return) }
 }
 
 /// A wrapper which acts as a reference to a local.
