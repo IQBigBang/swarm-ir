@@ -12,6 +12,7 @@ pub mod correct;
 pub mod cf_verify;
 pub mod abi;
 pub mod passes;
+pub mod intrinsic;
 
 /// Compile an IR Module to WebAssembly with the default
 /// preferred pipeline.

@@ -339,6 +339,11 @@ impl<'ctx> Verifier {
                         }
                     }
                 }
+                InstrK::Intrinsic(_) => {
+                    // As of now, all intrinsics are inserted with optimizations
+                    // therefore they're not present at verification
+                    unreachable!()
+                }
             }
         }
 

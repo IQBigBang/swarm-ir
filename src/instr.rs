@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hint::unreachable_unchecked};
 
-use crate::{metadata::Metadata, ty::{Ty, Type}};
+use crate::{intrinsic::{Intrinsic, Intrinsics}, metadata::Metadata, ty::{Ty, Type}};
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum InstrK<'ctx> {
@@ -91,6 +91,8 @@ pub enum InstrK<'ctx> {
     ///
     /// This instruction terminates a block, it shouldn't be followed by any more instructions.
     Return,
+    /// An intrinsic is a private instruction used for analysis, optimization etc.
+    Intrinsic(Intrinsic<'ctx>)
 }
 
 #[repr(C)]
@@ -112,6 +114,10 @@ pub struct Instr<'ctx> {
 impl<'ctx> Instr<'ctx> {
     pub fn new(kind: InstrK<'ctx>) -> Self {
         Self { kind, meta: Metadata::new() }
+    }
+
+    pub(crate) fn new_intrinsic(i: Intrinsics<'ctx>) -> Self {
+        Self { kind: InstrK::Intrinsic(Intrinsic(i)), meta: Metadata::new() }
     }
 }
 

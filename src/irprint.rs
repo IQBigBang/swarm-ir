@@ -122,6 +122,7 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             }
             InstrK::Discard => write!(w, "discard"),
             InstrK::Return => write!(w, "return"),
+            InstrK::Intrinsic(_) => write!(w, "intrinsic ?"), // TODO
         }?;
 
         if !self.meta.is_empty() {

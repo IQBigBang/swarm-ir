@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::Module, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, intrinsic::Intrinsics, module::Module, pass::FunctionPass, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
@@ -264,6 +264,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 },
                 InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
                 InstrK::Return => { out_f.instruction(wasm::Instruction::Return); }
+                InstrK::Intrinsic(i) => {
+                }
             };
         }
     } 
