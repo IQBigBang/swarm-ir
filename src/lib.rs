@@ -12,6 +12,8 @@ pub mod correct;
 pub mod cf_verify;
 pub mod abi;
 pub mod passes;
+#[cfg(feature = "c-api")]
+pub mod c_api;
 pub mod intrinsic;
 
 /// Compile an IR Module to WebAssembly with the default

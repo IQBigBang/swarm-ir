@@ -7,10 +7,17 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libintern = "0.4"
+libintern = "0.6"
 wasm-encoder = "0.6"
 # TODO: remove these, only used for testing
 # wasmprinter = "0.2"
 # wasmparser = "0.80"
 bit-set = "0.5"
 # wasmi = "0.9"
+
+[features]
+c-api = []
+default = ["c-api"]
+
+[lib]
+crate-type = ["cdylib"]

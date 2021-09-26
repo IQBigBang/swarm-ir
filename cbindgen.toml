@@ -1,0 +1,7 @@
+language = "C"
+
+[defines]
+feature = "c-api"
+
+[parse.expand]
+crates = ["swarm-ir"]
