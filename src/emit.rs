@@ -256,8 +256,11 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     };
                     let field_offset = A::struct_field_offset(struct_fields, *field_idx);
                     // emit the addition
-                    out_f.instruction(wasm::Instruction::I32Const(field_offset as i32));
-                    out_f.instruction(wasm::Instruction::I32Add);
+                    // opt: if the field_offset is zero, we don't need to emit I32Const(0) followed by IAdd
+                    if field_offset != 0 {
+                        out_f.instruction(wasm::Instruction::I32Const(field_offset as i32));
+                        out_f.instruction(wasm::Instruction::I32Add);
+                    }
                 },
                 InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
             };
