@@ -2,6 +2,7 @@ use crate::{instr::Function, module::Module};
 
 pub trait FunctionPass<'ctx> {
     type Error;
+    type Output;
 
     /// Start visiting the module. Called before any [`Self::visit_function`].
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
@@ -10,7 +11,7 @@ pub trait FunctionPass<'ctx> {
     fn visit_function(
         &mut self, 
         module: &Module<'ctx>,
-        function: &Function<'ctx>) -> Result<(), Self::Error>;
+        function: &Function<'ctx>) -> Result<Self::Output, Self::Error>;
     
     /// Invoked at the end of the module after all functions.
     fn end_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }

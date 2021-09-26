@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, Instr, InstrK}, pass::{MutableFunctionPass}};
+use crate::{instr::{BlockId, InstrK}, pass::{MutableFunctionPass}};
 
 pub struct ControlFlowVerifier {}
 

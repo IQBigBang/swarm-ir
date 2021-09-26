@@ -85,6 +85,18 @@ impl<'ctx> Module<'ctx> {
         self.functions.iter()
     }
 
+    pub(crate) fn function_count(&self) -> usize {
+        self.functions.len()
+    }
+
+    pub(crate) fn function_get_by_idx(&self, idx: usize) -> &Function<'ctx> {
+        self.functions.get(idx).unwrap()
+    }
+
+    pub(crate) fn function_get_mut_by_idx(&mut self, idx: usize) -> &mut Function<'ctx> {
+        self.functions.get_mut(idx).unwrap()
+    }
+
     pub fn int32t(&self) -> Ty<'ctx> {
         self.primitive_types_cache.int32
     }

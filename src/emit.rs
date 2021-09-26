@@ -319,6 +319,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
 
 impl<'ctx, A: Abi<BackendType = wasm::ValType>> FunctionPass<'ctx> for WasmEmitter<'ctx, A> {
     type Error = (); // TODO some error
+    type Output = ();
 
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> {
         // this must be done before visiting the functions
