@@ -29,6 +29,8 @@ the instruction returns control flow to its parent.
 
 
 4. To record where the `end` instruction returns to,
-a metadata field "direction" or "parent" or an alternative will be added to every instruction.
+a metadata field "direction" or "parent" or an alternative will be added to every instruction. 
+**DONE - commit a8f73f4cf738076b32f42c5a2e159e3628922723**
 
 5. Introduce a `return` instruction. This (obviously) immediately returns from a function.
+**DONE - commit 79b642d78e36b22ed28dce8e8df87dfd6d28109f**
