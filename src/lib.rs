@@ -30,6 +30,7 @@ pub fn pipeline_compile_module_to_wasm(mut module: module::Module<'_>, opt: bool
     module.do_mut_pass(&mut cf_verify::ControlFlowVerifier{}).unwrap();
     module.do_mut_pass(&mut verify::Verifier{}).unwrap();
 
+    #[cfg(feature = "opt")]
     if opt {
         for i in 0..module.function_count() {
             let result = passes::PeepholeOpt{}.visit_function(&module, module.function_get_by_idx(i)).unwrap();

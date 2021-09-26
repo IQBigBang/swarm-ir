@@ -17,7 +17,8 @@ bit-set = "0.5"
 
 [features]
 c-api = []
-default = ["c-api"]
+opt = []
+default = ["c-api", "opt"]
 
 [lib]
 crate-type = ["cdylib"]
