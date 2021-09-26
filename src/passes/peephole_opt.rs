@@ -4,13 +4,27 @@ use crate::{abi::{Abi, Wasm32Abi}, instr::{BlockId, Instr, InstrK}, intrinsic::I
 
 use super::BlobRewriteData;
 
+// TODO: this is just copied from the emitter code
+fn calc_struct_field_offset(struct_ty: Ty, field_idx: usize) -> usize {
+    let struct_fields = match &*struct_ty {
+        Type::Struct { fields } => fields,
+        _ => unreachable!()
+    };
+    <Wasm32Abi as Abi>::struct_field_offset(struct_fields, field_idx)
+}
 
 /// Replace two consecutive instructions with something new
 fn replace_2<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>>> {
     match (&i1.kind, &i2.kind) {
+        (InstrK::GetFieldPtr { struct_ty, field_idx }, InstrK::Read { ty }) => {
+            let offset = calc_struct_field_offset(*struct_ty, *field_idx);
+            Some(vec![Instr::new_intrinsic(Intrinsics::ReadAtOffset { offset, ty: *ty })])
+        },
         _ => None
     }
 }
+
+// TODO: replace (GetFieldPtr, load-instruction, Write) with (load-instruction, WriteOffset)
 
 pub struct PeepholeOpt {}
 

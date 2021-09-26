@@ -265,6 +265,25 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
                 InstrK::Return => { out_f.instruction(wasm::Instruction::Return); }
                 InstrK::Intrinsic(i) => {
+                    match &i.0 {
+                        Intrinsics::ReadAtOffset { offset, ty } => {
+                            let mem_arg = wasm::MemArg {
+                                offset: *offset as u64,
+                                align: A::type_alignment(*ty) as u32,
+                                memory_index: 0,
+                            };
+        
+                            match A::compile_type(*ty) {
+                                wasm::ValType::I32 => {
+                                    out_f.instruction(wasm::Instruction::I32Load(mem_arg));
+                                },
+                                wasm::ValType::F32 => {
+                                    out_f.instruction(wasm::Instruction::F32Load(mem_arg));
+                                },
+                                _ => unimplemented!()
+                            }
+                        },
+                    }
                 }
             };
         }
