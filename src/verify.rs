@@ -347,9 +347,9 @@ impl<'ctx> Verifier {
             }
         }
 
-        // also make sure the block ends with an End instruction
+        // also make sure the block ends with an End or Return instruction
         match block.body.last() {
-            Some(Instr { meta: _, kind: InstrK::End }) => {},
+            Some(Instr { meta: _, kind: InstrK::End | InstrK::Return }) => {},
             _ => return Err(VerifyError::UnexpectedEndOfBlock)
         }
 

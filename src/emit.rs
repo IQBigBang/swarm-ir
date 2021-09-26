@@ -170,7 +170,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     let block_type = wasm::BlockType::FunctionType(self.function_types[&then_block_type]);
                     out_f.instruction(wasm::Instruction::If(block_type));
                     // compile the `then` block
-                    ///// the block already ends with `end`, we don't need to add it
+                    // the block already ends with `end`, we don't need to add it
                     self.compile_block(module, function, function.get_block(*then).unwrap(), out_f, false);
                     
                     out_f.instruction(wasm::Instruction::Else);
@@ -263,7 +263,12 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     }
                 },
                 InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
-                InstrK::Return => { out_f.instruction(wasm::Instruction::Return); }
+                InstrK::Return => { 
+                    out_f.instruction(wasm::Instruction::Return);
+                    // because Return is considered a block terminator in SwarmIR
+                    // in wasm we need to emit `end` to terminate the block 
+                    if emit_end { out_f.instruction(wasm::Instruction::End); }
+                }
                 InstrK::Intrinsic(i) => {
                     match &i.0 {
                         Intrinsics::ReadAtOffset { offset, ty } => {
@@ -279,6 +284,23 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                                 },
                                 wasm::ValType::F32 => {
                                     out_f.instruction(wasm::Instruction::F32Load(mem_arg));
+                                },
+                                _ => unimplemented!()
+                            }
+                        },
+                        Intrinsics::WriteAtOffset { offset, ty } => {
+                            let mem_arg = wasm::MemArg {
+                                offset: *offset as u64,
+                                align: A::type_alignment(*ty) as u32,
+                                memory_index: 0,
+                            };
+        
+                            match A::compile_type(*ty) {
+                                wasm::ValType::I32 => {
+                                    out_f.instruction(wasm::Instruction::I32Store(mem_arg));
+                                },
+                                wasm::ValType::F32 => {
+                                    out_f.instruction(wasm::Instruction::F32Store(mem_arg));
                                 },
                                 _ => unimplemented!()
                             }
