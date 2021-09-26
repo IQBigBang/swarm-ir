@@ -331,6 +331,11 @@ impl<'ctx> Verifier {
                     }
                     stack.push(module.ptr_t());
                 }
+                InstrK::Discard => {
+                    if stack.pop().is_none() {
+                        return Err(VerifyError::StackUnderflow);
+                    }
+                }
             }
         }
 

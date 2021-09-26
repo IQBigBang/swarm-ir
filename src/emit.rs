@@ -259,6 +259,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     out_f.instruction(wasm::Instruction::I32Const(field_offset as i32));
                     out_f.instruction(wasm::Instruction::I32Add);
                 },
+                InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
             };
         }
     } 

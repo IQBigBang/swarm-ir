@@ -83,8 +83,11 @@ pub enum InstrK<'ctx> {
     /// Pop a pointer off the stack which points to `struct_ty`
     /// and push back a pointer which points to the Nth field of the struct
     GetFieldPtr { struct_ty: Ty<'ctx>, field_idx: usize },
+    /// Pop a value off the stack and discard it
+    Discard
 }
 
+#[repr(C)]
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Cmp {
     Eq,
