@@ -21,10 +21,21 @@ pub mod intrinsic;
 /// to worry about invoking necessary passes in correct order.
 ///
 /// Panics if any kind of error happens while compiling/verifying etc.
-pub fn pipeline_compile_module_to_wasm(mut module: module::Module<'_>) -> Vec<u8> {
+pub fn pipeline_compile_module_to_wasm(mut module: module::Module<'_>, opt: bool) -> Vec<u8> {
+    use pass::{MutableFunctionPass, FunctionPass};
+
     module.do_mut_pass(&mut correct::CorrectionPass{}).unwrap();
     module.do_mut_pass(&mut cf_verify::ControlFlowVerifier{}).unwrap();
     module.do_mut_pass(&mut verify::Verifier{}).unwrap();
+
+    if opt {
+        for i in 0..module.function_count() {
+            let result = passes::PeepholeOpt{}.visit_function(&module, module.function_get_by_idx(i)).unwrap();
+            let mut rewrite_pass = passes::InstrRewritePass::new(i, result).unwrap();
+            rewrite_pass.visit_function(&module, module.function_get_by_idx(i)).unwrap();
+            rewrite_pass.mutate_function(module.function_get_mut_by_idx(i), ()).unwrap();
+        }
+    }
 
     let mut e: emit::WasmEmitter<abi::Wasm32Abi> = emit::WasmEmitter::new();
     module.do_pass(&mut e).unwrap();
