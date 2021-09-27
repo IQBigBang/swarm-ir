@@ -3,6 +3,25 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/**
+ * Defines how the block is used
+ */
+typedef enum BlockTag {
+  Undefined,
+  /**
+   * The "main" block of the function
+   */
+  Main,
+  /**
+   * A block which is used as one of the branches of an IfElse instruction
+   */
+  IfElse,
+  /**
+   * A block which is used as the body of a Loop instruction
+   */
+  Loop,
+} BlockTag;
+
 typedef enum Cmp {
   Eq,
   Ne,
@@ -55,7 +74,8 @@ LocalRef builder_new_local(FunctionBuilderRef builder, TypeRef ty);
 
 BlockId builder_new_block(FunctionBuilderRef builder,
                           const TypeRef *block_returns,
-                          uintptr_t block_returnc);
+                          uintptr_t block_returnc,
+                          enum BlockTag block_tag);
 
 void builder_switch_block(FunctionBuilderRef builder, BlockId new_block);
 

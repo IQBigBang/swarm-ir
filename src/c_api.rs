@@ -3,7 +3,7 @@
 
 use std::{ffi::CStr, panic::catch_unwind, ptr::null};
 
-use crate::{builder::{self, FunctionBuilder, InstrBuilder}, instr::{self, Cmp}, irprint::IRPrint, module::{Module, WasmModuleConf}, ty::{Ty, Type}};
+use crate::{builder::{self, FunctionBuilder, InstrBuilder}, instr::{self, BlockTag, Cmp}, irprint::IRPrint, module::{Module, WasmModuleConf}, ty::{Ty, Type}};
 
 #[inline]
 fn c_alloc<T>(x: T) -> *mut () { Box::leak(Box::new(x)) as *mut T as *mut () }
@@ -140,11 +140,11 @@ pub unsafe extern "C" fn builder_new_local(builder: FunctionBuilderRef, ty: Type
 pub type BlockId = instr::BlockId;
 
 #[no_mangle]
-pub unsafe extern "C" fn builder_new_block(builder: FunctionBuilderRef, block_returns: *const TypeRef, block_returnc: usize) -> BlockId {
+pub unsafe extern "C" fn builder_new_block(builder: FunctionBuilderRef, block_returns: *const TypeRef, block_returnc: usize, block_tag: BlockTag) -> BlockId {
     let returns = slice_of(block_returns, block_returnc).iter().map(|type_ref| {
         Ty::from_raw(*type_ref as *const () as *const Type)
     });
-    (builder as *mut FunctionBuilder).as_mut().unwrap().new_block(returns)
+    (builder as *mut FunctionBuilder).as_mut().unwrap().new_block(returns, block_tag)
 }
 
 #[no_mangle]

@@ -144,10 +144,24 @@ impl Default for BlockId {
     fn default() -> Self { BlockId(usize::MAX) }
 }
 
+/// Defines how the block is used
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum BlockTag {
+    Undefined,
+    /// The "main" block of the function
+    Main,
+    /// A block which is used as one of the branches of an IfElse instruction
+    IfElse,
+    /// A block which is used as the body of a Loop instruction
+    Loop,
+}
+
 pub struct InstrBlock<'ctx> {
     /// A unique index of the block inside a function.
     /// It's assigned by the builder and shouldn't be touched by the user
     pub(crate) idx: BlockId,
+    pub(crate) tag: BlockTag,
     pub body: Vec<Instr<'ctx>>,
     /// Every block has a type - it must be a function type with no arguments.
     ///
@@ -158,13 +172,13 @@ pub struct InstrBlock<'ctx> {
 }
 
 impl<'ctx> InstrBlock<'ctx> {
-    pub fn new(idx: BlockId, block_ty: Ty<'ctx>) -> Self {
+    pub fn new(idx: BlockId, block_ty: Ty<'ctx>, tag: BlockTag) -> Self {
         assert!(block_ty.is_func());
         if let Type::Func { args, ret: _ } = &*block_ty {
             assert!(args.is_empty());
         }
 
-        InstrBlock { idx, body: Vec::new(), meta: Metadata::new(), block_ty }
+        InstrBlock { idx, tag, body: Vec::new(), meta: Metadata::new(), block_ty }
     }
     /// A helper function to avoid doing `block.body.push(Instr::new(SMTH))`.
     /// Instead you can just do block.add(SMTH)
@@ -187,6 +201,9 @@ impl<'ctx> InstrBlock<'ctx> {
     pub fn is_main(&self) -> bool {
         self.idx == BlockId(0)
     }
+
+    #[inline]
+    pub fn tag(&self) -> BlockTag { self.tag }
 }
 
 pub struct Function<'ctx> {

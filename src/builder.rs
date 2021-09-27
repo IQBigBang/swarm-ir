@@ -2,10 +2,10 @@
 
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, Cmp, Function, Instr, InstrBlock, InstrK}, metadata::Metadata, module::Module, ty::{Ty, Type}};
+use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, metadata::Metadata, module::Module, ty::{Ty, Type}};
 
 pub struct FunctionBuilder<'ctx> {
-    blocks: HashMap<BlockId, (Vec<Ty<'ctx>>, Vec<Instr<'ctx>>)>,
+    blocks: HashMap<BlockId, (Vec<Ty<'ctx>>, Vec<Instr<'ctx>>, BlockTag)>,
     next_block_id: usize,
     /// The index of the block currently being modified
     current_block: usize,
@@ -29,7 +29,7 @@ impl<'ctx> FunctionBuilder<'ctx> {
 
         // The type of the block is what values it returns
         // The main "entry" block returns the same values the function does
-        let entry_block = (returns.clone(), vec![]);
+        let entry_block = (returns.clone(), vec![], BlockTag::Main);
 
         let locals: Vec<_> = arguments.into_iter().collect();
 
@@ -59,11 +59,11 @@ impl<'ctx> FunctionBuilder<'ctx> {
         LocalRef(self.locals.len() - 1)
     }
 
-    pub fn new_block(&mut self, returns: impl IntoIterator<Item = Ty<'ctx>>) -> BlockId {
+    pub fn new_block(&mut self, returns: impl IntoIterator<Item = Ty<'ctx>>, tag: BlockTag) -> BlockId {
         let new_block_id = self.next_block_id.into();
         self.next_block_id += 1;
         let returns: Vec<_> = returns.into_iter().collect();
-        let new_block = (returns, vec![]);
+        let new_block = (returns, vec![], tag);
         self.blocks.insert(new_block_id, new_block);
         new_block_id
     }
@@ -77,9 +77,9 @@ impl<'ctx> FunctionBuilder<'ctx> {
     pub fn finish(self, module: &mut Module<'ctx>) {
         // Build the blocks
         let mut blocks = HashMap::new();
-        for (id, (returns, mut instrs)) in self.blocks {
+        for (id, (returns, mut instrs, tag)) in self.blocks {
             let block_ty = module.intern_type(Type::Func { args: vec![], ret: returns });
-            let mut block = InstrBlock::new(id, block_ty);
+            let mut block = InstrBlock::new(id, block_ty, tag);
             block.body.append(&mut instrs);
 
             let x = blocks.insert(id, block);

@@ -60,3 +60,8 @@ This integer is calculated as follows:
     * for every `IfElse` instruction, the block(s) it contains have a distance equal to the current block plus one.
 
 Then, every `Break` instruction compiles to `br n`, where `n` is the innermost_loop_distance of this block + 1
+
+4. For multiple purposes, add a tag to every block which specifies it
+as either the "main" block, or a "if_else" block, or a "loop" block, depending on how it's used.
+This can be used for simple reasoning about the control flow and stems from the requirement
+that every block be used at most once.
