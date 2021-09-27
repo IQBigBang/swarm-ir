@@ -339,6 +339,22 @@ impl<'ctx> Verifier {
                         }
                     }
                 }
+                InstrK::MemorySize => {
+                    // just pushes an int
+                    stack.push(module.int32t())
+                }
+                InstrK::MemoryGrow => {
+                    // pops an int and pushes it again
+                    let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !val.is_int() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.int32t(),
+                            actual: val,
+                            reason: "MemoryGrow instruction"
+                        })
+                    }
+                    stack.push(val); // it's an int
+                }
                 InstrK::Intrinsic(_) => {
                     // As of now, all intrinsics are inserted with optimizations
                     // therefore they're not present at verification

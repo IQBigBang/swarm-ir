@@ -184,6 +184,10 @@ argless_instr!(
     builder_i_ftoi : i_ftoi
     builder_i_call_indirect : i_call_indirect
     builder_i_end : i_end
+    builder_i_memory_grow : i_memory_grow
+    builder_i_memory_size : i_memory_size
+    builder_i_discard : i_discard
+    builder_i_return : i_return
 );
 
 #[no_mangle]
@@ -252,16 +256,6 @@ pub unsafe extern "C" fn builder_i_get_field_ptr(builder: FunctionBuilderRef, st
         Ty::from_raw(struct_ty as *const () as *const Type),
         field_idx
     ) 
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn builder_i_discard(builder: FunctionBuilderRef) {
-    (builder as *mut FunctionBuilder).as_mut().unwrap().i_discard()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn builder_i_return(builder: FunctionBuilderRef) {
-    (builder as *mut FunctionBuilder).as_mut().unwrap().i_return()
 }
 
 #[no_mangle]

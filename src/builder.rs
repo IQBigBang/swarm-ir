@@ -143,6 +143,8 @@ pub trait InstrBuilder<'ctx> {
     }
     fn i_discard(&mut self) { self.instr(InstrK::Discard) }
     fn i_return(&mut self) { self.instr(InstrK::Return) }
+    fn i_memory_size(&mut self) { self.instr(InstrK::MemorySize) }
+    fn i_memory_grow(&mut self) { self.instr(InstrK::MemoryGrow) }
 }
 
 /// A wrapper which acts as a reference to a local.

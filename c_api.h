@@ -107,6 +107,10 @@ void builder_i_call_indirect(FunctionBuilderRef builder);
 
 void builder_i_end(FunctionBuilderRef builder);
 
+void builder_i_memory_grow(FunctionBuilderRef builder);
+
+void builder_i_memory_size(FunctionBuilderRef builder);
+
 void builder_i_icmp(FunctionBuilderRef builder, enum Cmp cmp);
 
 void builder_i_fcmp(FunctionBuilderRef builder, enum Cmp cmp);

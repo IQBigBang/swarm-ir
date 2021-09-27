@@ -122,6 +122,8 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             }
             InstrK::Discard => write!(w, "discard"),
             InstrK::Return => write!(w, "return"),
+            InstrK::MemorySize => write!(w, "memory.size"),
+            InstrK::MemoryGrow => write!(w, "memory.grow"),
             InstrK::Intrinsic(_) => write!(w, "intrinsic ?"), // TODO
         }?;
 

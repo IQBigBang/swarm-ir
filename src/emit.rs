@@ -269,6 +269,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     // in wasm we need to emit `end` to terminate the block 
                     if emit_end { out_f.instruction(wasm::Instruction::End); }
                 }
+                InstrK::MemorySize => { out_f.instruction(wasm::Instruction::MemorySize(0)); }
+                InstrK::MemoryGrow => { out_f.instruction(wasm::Instruction::MemoryGrow(0)); }
                 InstrK::Intrinsic(i) => {
                     match &i.0 {
                         Intrinsics::ReadAtOffset { offset, ty } => {

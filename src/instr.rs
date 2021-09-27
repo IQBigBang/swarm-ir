@@ -91,6 +91,14 @@ pub enum InstrK<'ctx> {
     ///
     /// This instruction terminates a block, it shouldn't be followed by any more instructions.
     Return,
+    /// Corresponds to the WebAssembly [`memory.size`](https://webassembly.github.io/spec/core/exec/instructions.html#xref-syntax-instructions-syntax-instr-memory-mathsf-memory-size) instruction.
+    ///
+    /// Pushes an integer.
+    MemorySize,
+    /// Corresponds to the WebAssembly [`memory.grow`](https://webassembly.github.io/spec/core/exec/instructions.html#xref-syntax-instructions-syntax-instr-memory-mathsf-memory-grow) instruction.
+    ///
+    /// Pops an integer off the stack and pushes a new one.
+    MemoryGrow,
     /// An intrinsic is a private instruction used for analysis, optimization etc.
     Intrinsic(Intrinsic<'ctx>)
 }
