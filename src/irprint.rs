@@ -1,4 +1,4 @@
-use crate::{instr::{BlockId, Cmp, Function, Instr, InstrBlock, InstrK}, module::Module, ty::{Ty, Type}};
+use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::Module, ty::{Ty, Type}};
 
 pub trait IRPrint {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result;
@@ -143,6 +143,12 @@ impl IRPrint for BlockId {
 impl<'ctx> IRPrint for InstrBlock<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         write!(w, "b{}:", self.idx.id())?;
+        write!(w, " (tag={})", match self.tag {
+            BlockTag::Undefined => "undefined",
+            BlockTag::Main => "main",
+            BlockTag::IfElse => "if_else",
+            BlockTag::Loop => "loop",
+        })?;
 
         if !self.meta.is_empty() {
             write!(w, "  # ")?;
