@@ -117,6 +117,10 @@ impl<'ctx> Instr<'ctx> {
         Self { kind, meta: Metadata::new() }
     }
 
+    pub(crate) fn new_with_meta(kind: InstrK<'ctx>, meta: Metadata) -> Self {
+        Self { kind, meta }
+    }
+
     pub(crate) fn new_intrinsic(i: Intrinsics<'ctx>) -> Self {
         Self { kind: InstrK::Intrinsic(Intrinsic(i)), meta: Metadata::new() }
     }

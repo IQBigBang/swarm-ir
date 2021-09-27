@@ -16,10 +16,17 @@ fn calc_struct_field_offset(struct_ty: Ty, field_idx: usize) -> usize {
 /// Replace two consecutive instructions with something new
 fn replace_2<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>>> {
     match (&i1.kind, &i2.kind) {
+        // [GetFieldPtr, Read] -> [ReadAtOffset]
         (InstrK::GetFieldPtr { struct_ty, field_idx }, InstrK::Read { ty }) => {
             let offset = calc_struct_field_offset(*struct_ty, *field_idx);
             Some(vec![Instr::new_intrinsic(Intrinsics::ReadAtOffset { offset, ty: *ty })])
         },
+        // [LoadGlobalFunc, CallIndirect] -> [CallDirect]
+        (InstrK::LdGlobalFunc { func_name }, InstrK::CallIndirect) => {
+            // CallIndirect has the type metadata
+            let meta = i2.meta.clone();
+            Some(vec![Instr::new_with_meta(InstrK::CallDirect { func_name: func_name.clone() }, meta)])
+        }
         _ => None
     }
 }
