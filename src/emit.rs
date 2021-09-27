@@ -374,6 +374,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
             .section(&self.func_sec)
             .section(&self.table_sec)
             .section(&self.memory_sec)
+            .section(&self.global_sec)
             .section(&self.export_sec)
             .section(&self.elem_sec)
             .section(&self.code_sec);

@@ -1,4 +1,4 @@
-use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::Module, ty::{Ty, Type}};
+use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::{Global, Module}, ty::{Ty, Type}};
 
 pub trait IRPrint {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result;
@@ -194,8 +194,24 @@ impl<'ctx> IRPrint for Function<'ctx> {
     }
 }
 
+impl<'ctx> IRPrint for Global<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        write!(w, "global \"{}\" = ", self.name)?;
+        if self.is_int() {
+            write!(w, "int32 {}", self.get_int_value())?;
+        } else {
+            write!(w, "float32 {}", self.get_float_value())?;
+        }
+        writeln!(w)
+    }
+}
+
 impl<'ctx> IRPrint for Module<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        for g in self.globals_iter() {
+            g.ir_print(w)?;
+        }
+        writeln!(w)?;
         for f in self.functions_iter() {
             f.ir_print(w)?;
         }
