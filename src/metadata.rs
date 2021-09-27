@@ -2,19 +2,19 @@ use std::{any::Any, fmt::Debug};
 
 use crate::{irprint::IRPrint, ty::Ty};
 
-//pub type Metadata = ();
-
-/*trait Metadata {
-    
-}*/
-
 trait MetadataRequiredTraits {
     fn as_any(&self) -> &dyn Any;
     fn as_ir_print(&self) -> &dyn IRPrint;
+    fn clone_into_box(&self) -> Box<dyn MetadataRequiredTraits>;
+    //fn as_clone(&self) -> &dyn ObjectSafeClone;
 }
-impl<T: Any + IRPrint> MetadataRequiredTraits for T {
+impl<T: Any + IRPrint + Clone> MetadataRequiredTraits for T {
     fn as_any(&self) -> &dyn Any { self }
     fn as_ir_print(&self) -> &dyn IRPrint { self }
+    /// We can't have a &dyn Clone because it's not object safe, this is an alternative
+    fn clone_into_box(&self) -> Box<dyn MetadataRequiredTraits> {
+        Box::new(self.clone())
+    }
 }
 
 /// These form a linked list
@@ -24,11 +24,22 @@ struct MetadataNode {
     next: Option<Box<MetadataNode>>
 }
 
+impl Clone for MetadataNode {
+    fn clone(&self) -> Self {
+        MetadataNode {
+            key: self.key,
+            val: self.val.clone_into_box(),
+            next: self.next.clone()
+        }
+    }
+}
+
 /// [`Metadata`] is a multi-threading-enabled dictionary of dynamically-typed values.
 ///
 /// It is used to add notes/analysis results/type information to instructions, block, functions etc.
 #[repr(transparent)]
 #[allow(clippy::type_complexity)]
+#[derive(Clone)]
 pub(crate) struct Metadata(Option<Box<MetadataNode>>);
 
 impl Metadata {
@@ -43,7 +54,7 @@ impl Metadata {
         });
     }
 
-    pub(crate) fn insert<T: Any + IRPrint>(&mut self, name: &'static str, value: T) {
+    pub(crate) fn insert<T: Any + IRPrint + Clone>(&mut self, name: &'static str, value: T) {
         let old_first = self.0.take();
         // create the MetadataNode
         let first = MetadataNode {

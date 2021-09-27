@@ -106,6 +106,7 @@ pub enum Cmp {
     Ge
 }
 
+#[derive(Clone)]
 pub struct Instr<'ctx> {
     pub kind: InstrK<'ctx>,
     pub(crate) meta: Metadata
