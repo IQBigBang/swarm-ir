@@ -99,6 +99,10 @@ pub enum InstrK<'ctx> {
     ///
     /// Pops an integer off the stack and pushes a new one.
     MemoryGrow,
+    /// Load the value of a global and push it onto the stack
+    LdGlobal(String),
+    /// Pop a value off the stack and store it into a global
+    StGlobal(String),
     /// An intrinsic is a private instruction used for analysis, optimization etc.
     Intrinsic(Intrinsic<'ctx>)
 }
@@ -131,6 +135,14 @@ impl<'ctx> Instr<'ctx> {
 
     pub(crate) fn new_intrinsic(i: Intrinsics<'ctx>) -> Self {
         Self { kind: InstrK::Intrinsic(Intrinsic(i)), meta: Metadata::new() }
+    }
+
+    /// Return true if this instruction is a "load" instruction.
+    /// A "load" instruction is an instruction which pops no values off the stack and pushes exactly one value.
+    ///
+    /// Namely this includes LdInt, LdFloat, LdLocal, LdGlobalFunc
+    pub fn is_load(&self) -> bool {
+        matches!(self.kind, InstrK::LdInt(_) | InstrK::LdFloat(_) | InstrK::LdLocal { idx: _ } | InstrK::LdGlobalFunc { func_name: _ })
     }
 }
 

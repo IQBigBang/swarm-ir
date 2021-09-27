@@ -355,6 +355,21 @@ impl<'ctx> Verifier {
                     }
                     stack.push(val); // it's an int
                 }
+                InstrK::LdGlobal(name) => {
+                    let g = module.get_global(name).ok_or_else(|| VerifyError::UndefinedGlobal { name: name.clone() })?;
+                    stack.push(g.ty);
+                }
+                InstrK::StGlobal(name) => {
+                    let value = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    let g = module.get_global(name).ok_or_else(|| VerifyError::UndefinedGlobal { name: name.clone() })?;
+                    if value != g.ty {
+                        return Err(VerifyError::InvalidType {
+                            expected: g.ty,
+                            actual: value,
+                            reason: "StGlobal instruction"
+                        })
+                    }
+                },
                 InstrK::Intrinsic(_) => {
                     // As of now, all intrinsics are inserted with optimizations
                     // therefore they're not present at verification
@@ -488,5 +503,6 @@ pub enum VerifyError<'ctx> {
     InvalidBlockId,
     UnexpectedStructType { r#where: &'static str },
     GetFieldPtrExpectedStructType,
-    OutOfBoundsStructIndex
+    OutOfBoundsStructIndex,
+    UndefinedGlobal { name: String }
 }

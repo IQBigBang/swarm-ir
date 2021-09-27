@@ -115,6 +115,10 @@ void builder_i_memory_grow(FunctionBuilderRef builder);
 
 void builder_i_memory_size(FunctionBuilderRef builder);
 
+void builder_i_discard(FunctionBuilderRef builder);
+
+void builder_i_return(FunctionBuilderRef builder);
+
 void builder_i_icmp(FunctionBuilderRef builder, enum Cmp cmp);
 
 void builder_i_fcmp(FunctionBuilderRef builder, enum Cmp cmp);
@@ -141,8 +145,8 @@ void builder_i_offset(FunctionBuilderRef builder, TypeRef ty);
 
 void builder_i_get_field_ptr(FunctionBuilderRef builder, TypeRef struct_ty, uintptr_t field_idx);
 
-void builder_i_discard(FunctionBuilderRef builder);
+void builder_i_ld_global(FunctionBuilderRef builder, const int8_t *name);
 
-void builder_i_return(FunctionBuilderRef builder);
+void builder_i_st_global(FunctionBuilderRef builder, const int8_t *name);
 
 const uint8_t *compile_full_module(ModuleRef module, bool opt, uintptr_t *out_len);

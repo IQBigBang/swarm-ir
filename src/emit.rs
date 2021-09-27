@@ -274,6 +274,12 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 }
                 InstrK::MemorySize => { out_f.instruction(wasm::Instruction::MemorySize(0)); }
                 InstrK::MemoryGrow => { out_f.instruction(wasm::Instruction::MemoryGrow(0)); }
+                InstrK::LdGlobal(name) => {
+                    out_f.instruction(wasm::Instruction::GlobalGet(module.get_global(name).unwrap().idx as u32));
+                }
+                InstrK::StGlobal(name) => {
+                    out_f.instruction(wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx as u32));
+                }
                 InstrK::Intrinsic(i) => {
                     match &i.0 {
                         Intrinsics::ReadAtOffset { offset, ty } => {
