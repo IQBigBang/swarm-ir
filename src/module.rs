@@ -13,6 +13,8 @@ pub struct Module<'ctx> {
     functions: Vec<Function<'ctx>>,
     // This is for fast lookup by name
     function_registry: HashMap<String, usize>,
+    globals: Vec<Global<'ctx>>,
+    global_registry: HashMap<String, usize>,
     /// We cache Ty<'ctx> of primitive types for faster access
     primitive_types_cache: PrimitiveTypeCache<'ctx>,
     /// Some configuration of the result webassembly module
@@ -48,6 +50,8 @@ impl<'ctx> Module<'ctx> {
             type_ctx/*: RefCell::new(type_ctx)*/,
             functions: Vec::new(),
             function_registry: HashMap::new(),
+            globals: Vec::new(),
+            global_registry: HashMap::new(),
             primitive_types_cache: cache,
             conf: wasm_module_conf
         }
@@ -126,4 +130,67 @@ impl<'ctx> Module<'ctx> {
         }
         Ok(())
     }
+
+    /// Create a new global of an integer type
+    pub fn new_int_global(&mut self, name: String, value: i32) {
+        // TODO: handle two globals with the same name
+        let global = Global { name, ty: self.int32t(), value: GlobalValueInit::ConstInt(value), idx: 0 };
+        self.new_global(global)
+    }
+
+    /// Create a new global of a floating-point type
+    pub fn new_float_global(&mut self, name: String, value: f32) {
+        let global = Global { name, ty: self.float32t(), value: GlobalValueInit::ConstFloat(value), idx: 0 };
+        self.new_global(global)
+    }
+
+    fn new_global(&mut self, mut g: Global<'ctx>) {
+        let idx = self.globals.len();
+        g.idx = idx;
+        self.global_registry.insert(g.name.clone(), idx);
+        self.globals.push(g);
+    }
+
+    pub fn globals_iter(&self) -> impl Iterator<Item = &Global<'ctx>> {
+        self.globals.iter()
+    }
+}
+
+pub struct Global<'ctx> {
+    pub(crate) name: String,
+    pub(crate) ty: Ty<'ctx>,
+    value: GlobalValueInit,
+    /// The Global's index (equivalent to how functions have indexes)
+    /// assigned by the module
+    pub(crate) idx: usize
+}
+
+impl<'ctx> Global<'ctx> {
+    pub(crate) fn is_int(&self) -> bool {
+        matches!(self.value, GlobalValueInit::ConstInt(_))
+    }
+
+    pub(crate) fn is_float(&self) -> bool {
+        matches!(self.value, GlobalValueInit::ConstFloat(_))
+    }
+
+    pub(crate) fn get_int_value(&self) -> i32 {
+        match self.value {
+            GlobalValueInit::ConstInt(x) => x,
+            _ => panic!()
+        }
+    }
+
+    pub(crate) fn get_float_value(&self) -> f32 {
+        match self.value {
+            GlobalValueInit::ConstFloat(x) => x,
+            _ => panic!()
+        }
+    }
+}
+
+enum GlobalValueInit {
+    ConstInt(i32),
+    ConstFloat(f32),
+    // TODO: ConstFunc (and other types)
 }

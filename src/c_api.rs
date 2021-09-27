@@ -103,6 +103,18 @@ pub unsafe extern "C" fn module_get_struct_type(module: ModuleRef, field_types: 
         .unwrap_or(null())
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn module_new_int_global(module: ModuleRef, global_name: *const i8, value: i32) {
+    (module as *mut Module).as_mut().unwrap()
+        .new_int_global(string_of(global_name), value);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn module_new_float_global(module: ModuleRef, global_name: *const i8, value: f32) {
+    (module as *mut Module).as_mut().unwrap()
+        .new_float_global(string_of(global_name), value);
+}
+
 pub type FunctionBuilderRef = *mut ();
 
 #[no_mangle]

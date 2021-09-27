@@ -19,6 +19,8 @@ pub struct WasmEmitter<'ctx, A: Abi> {
     table_sec: wasm::TableSection,
     /// Defines the memory
     memory_sec: wasm::MemorySection,
+    /// Defines the global items
+    global_sec: wasm::GlobalSection,
     /// Defines what items (functions, memories) are exported
     export_sec: wasm::ExportSection,
     /// Defines the elements of the global function table
@@ -40,6 +42,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
             func_sec: wasm::FunctionSection::new(),
             table_sec: wasm::TableSection::new(),
             memory_sec: wasm::MemorySection::new(),
+            global_sec: wasm::GlobalSection::new(),
             export_sec: wasm::ExportSection::new(),
             elem_sec: wasm::ElementSection::new(),
             code_sec: wasm::CodeSection::new(),
@@ -348,6 +351,22 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
             wasm::Elements::Functions(&functions_indexes));
     }
 
+    fn emit_globals(&mut self, module: &Module<'ctx>) {
+        for glob in module.globals_iter() {
+            let init_expr = if glob.is_int() {
+                wasm::Instruction::I32Const(glob.get_int_value())
+            } else {
+                wasm::Instruction::F32Const(glob.get_float_value())
+            };
+
+            self.global_sec.global(
+                wasm::GlobalType {
+                    val_type: A::compile_type(glob.ty),
+                    mutable: true // TODO immutable globals
+                }, init_expr);
+        }
+    }
+
     pub fn finish(mut self) -> Vec<u8> {
         // Emit the sections in correct order
         self.module
@@ -369,6 +388,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> FunctionPass<'ctx> for WasmEmitt
     fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> {
         // this must be done before visiting the functions
         self.encode_types(module);
+        // emit globals' definitions
+        self.emit_globals(module);
         Ok(())
     }
 

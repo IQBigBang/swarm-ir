@@ -64,6 +64,10 @@ TypeRef module_get_func_type(ModuleRef module,
 
 TypeRef module_get_struct_type(ModuleRef module, const TypeRef *field_types, uintptr_t fieldc);
 
+void module_new_int_global(ModuleRef module, const int8_t *global_name, int32_t value);
+
+void module_new_float_global(ModuleRef module, const int8_t *global_name, float value);
+
 FunctionBuilderRef create_function_builder(const int8_t *function_name, TypeRef function_type);
 
 void finish_function_builder(ModuleRef module, FunctionBuilderRef builder);
