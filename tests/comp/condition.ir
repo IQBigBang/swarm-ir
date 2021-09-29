@@ -1,0 +1,19 @@
+func "f" (int32) -> int32 {
+locals:
+    #0  int32
+b0: () -> int32 tag=main
+    ld.loc #0
+    ld.int 0
+    icmp.lt
+    if then b1 else b2
+
+b1: () -> int32 tag=if_else
+    ld.int 42
+    end
+
+b2: () -> int32 tag=if_else
+    ld.loc #0
+    ld.int 3
+    imul
+    end
+}
