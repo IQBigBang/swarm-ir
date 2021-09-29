@@ -144,7 +144,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 },
                 InstrK::CallIndirect => {
                     // meta["ty"] injected by the Verifier
-                    let function_ty = instr.meta.retrieve_ty("ty").unwrap();
+                    let function_ty = instr.meta.retrieve_ty(key!("ty")).unwrap();
                     out_f.instruction(wasm::Instruction::CallIndirect {
                         ty: self.function_types[&function_ty],
                         table: 0 // the GFT is the only one and it's at index zero
@@ -152,7 +152,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 },
                 InstrK::Bitcast { target } => {
                     // meta["from"] injected by the Verifier
-                    let from = instr.meta.retrieve_ty("from").unwrap();
+                    let from = instr.meta.retrieve_ty(key!("from")).unwrap();
                     let from_wasm = A::compile_type(from);
                     let to_wasm = A::compile_type(*target);
                     match (from_wasm, to_wasm) {

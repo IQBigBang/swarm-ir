@@ -111,12 +111,12 @@ impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
         
         for block in function.blocks_iter_mut() {
             if block_parents.contains_key(&block.idx) {
-                block.meta.insert("parent", block_parents[&block.idx]);
+                block.meta.insert(key!("parent"), block_parents[&block.idx]);
             
                 // also add the "parent" information to the `end` instruction
                 match block.body.last().unwrap().kind {
                     InstrK::End => {
-                        block.body.last_mut().unwrap().meta.insert("parent", block_parents[&block.idx]);
+                        block.body.last_mut().unwrap().meta.insert(key!("parent"), block_parents[&block.idx]);
                     }
                     // don't add the parent information to 'return'
                     InstrK::Return => {}

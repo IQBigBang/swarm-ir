@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hint::unreachable_unchecked};
 
-use crate::{intrinsic::{Intrinsic, Intrinsics}, metadata::Metadata, ty::{Ty, Type}};
+use crate::{intrinsic::{Intrinsic, Intrinsics}, metadata::{Key, Metadata}, ty::{Ty, Type}};
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum InstrK<'ctx> {
@@ -121,7 +121,7 @@ pub enum Cmp {
 #[derive(Clone)]
 pub struct Instr<'ctx> {
     pub kind: InstrK<'ctx>,
-    pub(crate) meta: Metadata<'ctx, &'static str>
+    pub(crate) meta: Metadata<'ctx, Key>
 }
 
 impl<'ctx> Instr<'ctx> {
@@ -129,7 +129,7 @@ impl<'ctx> Instr<'ctx> {
         Self { kind, meta: Metadata::new() }
     }
 
-    pub(crate) fn new_with_meta(kind: InstrK<'ctx>, meta: Metadata<'ctx, &'static str>) -> Self {
+    pub(crate) fn new_with_meta(kind: InstrK<'ctx>, meta: Metadata<'ctx, Key>) -> Self {
         Self { kind, meta }
     }
 
@@ -193,7 +193,7 @@ pub struct InstrBlock<'ctx> {
     /// The `return` of the function type describes what types are left on the stack
     /// once the block is exited.
     block_ty: Ty<'ctx>,
-    pub(crate) meta: Metadata<'ctx, &'static str>
+    pub(crate) meta: Metadata<'ctx, Key>
 }
 
 impl<'ctx> InstrBlock<'ctx> {

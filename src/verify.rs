@@ -471,7 +471,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
     
                     debug_assert!(matches!(instr.kind, InstrK::CallIndirect));
     
-                    instr.meta.insert_ty("ty", function_ty)
+                    instr.meta.insert_ty(key!("ty"), function_ty)
                 }
                 
                 if info.bitcast_source_types.contains_key(&key) {
@@ -479,7 +479,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
     
                     debug_assert!(matches!(instr.kind, InstrK::Bitcast { target: _ }));
     
-                    instr.meta.insert_ty("from", source_ty)
+                    instr.meta.insert_ty(key!("from"), source_ty)
                 }
             }
 

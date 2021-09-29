@@ -1,6 +1,7 @@
 pub mod ty;
 pub mod instr;
 // This module doesn't need to be public as it doesn't contain anything public anyway
+#[macro_use]
 pub(crate) mod metadata;
 pub mod module;
 pub mod pass;
