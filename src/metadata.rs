@@ -1,15 +1,47 @@
-use std::{any::Any, fmt::Debug, marker::PhantomData};
+use std::{any::Any, fmt::{Debug, Display}, marker::PhantomData};
 
 use crate::{irprint::IRPrint, ty::Ty};
 
+/// An efficient metadata key.
+/// Obtained via the [`key!`] macro.
+#[derive(Clone, Copy)]
+pub(crate) struct Key(pub(crate) usize);
+
+/// Get a metadata key
+macro_rules! key {
+    ("ty") => { crate::metadata::Key(0) };
+    ("from") => { crate::metadata::Key(1) };
+    ("parent") => { crate::metadata::Key(2) };
+}
+
+// The opposite of the macro
+impl From<&Key> for &'static str {
+    fn from(key: &Key) -> Self {
+        match key.0 {
+            0 => "ty",
+            1 => "from",
+            2 => "parent",
+            _ => unreachable!()
+        }
+    }
+}
+impl std::fmt::Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", { let x: &'static str = self.into(); x }) }
+}
+
 /// Metadata can be indexed either by:
 /// * &'static str - more comfortable, more prone to errors (typos) and less performant at runtime
+/// * Key - less comfortable, is basically an integer
 pub(crate) trait MetadataKey : Copy + Display {
     fn eq(self, other: Self) -> bool;
 }
 impl MetadataKey for &'static str {
     #[inline(always)]
     fn eq(self, other: Self) -> bool { self == other }
+}
+impl MetadataKey for Key {
+    #[inline(always)]
+    fn eq(self, other: Self) -> bool { self.0 == other.0 }
 }
 
 trait MetadataRequiredTraits {
