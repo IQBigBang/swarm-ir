@@ -154,6 +154,11 @@ impl<'ctx> Module<'ctx> {
     pub fn globals_iter(&self) -> impl Iterator<Item = &Global<'ctx>> {
         self.globals.iter()
     }
+
+    pub fn get_global(&self, name: &str) -> Option<&Global<'ctx>> {
+        let id = *self.global_registry.get(name)?;
+        Some(&self.globals[id])
+    }
 }
 
 pub struct Global<'ctx> {
