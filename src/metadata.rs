@@ -2,6 +2,16 @@ use std::{any::Any, fmt::Debug, marker::PhantomData};
 
 use crate::{irprint::IRPrint, ty::Ty};
 
+/// Metadata can be indexed either by:
+/// * &'static str - more comfortable, more prone to errors (typos) and less performant at runtime
+pub(crate) trait MetadataKey : Copy + Display {
+    fn eq(self, other: Self) -> bool;
+}
+impl MetadataKey for &'static str {
+    #[inline(always)]
+    fn eq(self, other: Self) -> bool { self == other }
+}
+
 trait MetadataRequiredTraits {
     fn as_any(&self) -> &dyn Any;
     fn as_ir_print(&self) -> &dyn IRPrint;
@@ -18,13 +28,13 @@ impl<T: Any + IRPrint + Clone> MetadataRequiredTraits for T {
 }
 
 /// These form a linked list
-struct MetadataNode {
-    key: &'static str,
+struct MetadataNode<K: MetadataKey> {
+    key: K,
     val: Box<dyn MetadataRequiredTraits>,
-    next: Option<Box<MetadataNode>>
+    next: Option<Box<MetadataNode<K>>>
 }
 
-impl Clone for MetadataNode {
+impl<K: MetadataKey> Clone for MetadataNode<K> {
     fn clone(&self) -> Self {
         MetadataNode {
             key: self.key,
@@ -40,21 +50,21 @@ impl Clone for MetadataNode {
 #[repr(transparent)]
 #[allow(clippy::type_complexity)]
 #[derive(Clone)]
-pub(crate) struct Metadata<'ctx>(Option<Box<MetadataNode>>, PhantomData<Ty<'ctx>>);
+pub(crate) struct Metadata<'ctx, K: MetadataKey>(Option<Box<MetadataNode<K>>>, PhantomData<Ty<'ctx>>);
 
-impl<'ctx> Metadata<'ctx> {
+impl<'ctx, K: MetadataKey> Metadata<'ctx, K> {
     #[inline(always)]
     pub(crate) fn new() -> Self {
         Metadata(None, PhantomData)
     }
 
-    pub(crate) fn insert_ty(&mut self, name: &'static str, value: Ty<'ctx>) {
+    pub(crate) fn insert_ty(&mut self, name: K, value: Ty<'ctx>) {
         self.insert::<Ty<'static>>(name, unsafe { 
             std::mem::transmute::<Ty<'ctx>, Ty<'static>>(value) /* the type annotations are to make sure the transmute is correct */ 
         });
     }
 
-    pub(crate) fn insert<T: Any + IRPrint + Clone>(&mut self, name: &'static str, value: T) {
+    pub(crate) fn insert<T: Any + IRPrint + Clone>(&mut self, name: K, value: T) {
         let old_first = self.0.take();
         // create the MetadataNode
         let first = MetadataNode {
@@ -65,10 +75,10 @@ impl<'ctx> Metadata<'ctx> {
         self.0 = Some(Box::new(first));
     }
 
-    fn find_value<'a>(node: &'a MetadataNode, key: &'static str) -> Option<&'a dyn MetadataRequiredTraits> {
+    fn find_value<'a>(node: &'a MetadataNode<K>, key: K) -> Option<&'a dyn MetadataRequiredTraits> {
         let mut current = node;
         loop {
-            if current.key == key {
+            if current.key.eq(key) {
                 return Some(&*current.val)
             }
             if let Some(next) = &current.next {
@@ -79,7 +89,7 @@ impl<'ctx> Metadata<'ctx> {
         }
     }
 
-    pub(crate) fn retrieve<T: Any>(&self, name: &'static str) -> Option<&T> {
+    pub(crate) fn retrieve<T: Any>(&self, name: K) -> Option<&T> {
         match &self.0 {
             None => None, // no items => you can't retrieve anything
             Some(first) => {
@@ -94,17 +104,17 @@ impl<'ctx> Metadata<'ctx> {
         }
     }
 
-    pub(crate) fn retrieve_ty(&self, name: &'static str) -> Option<Ty<'ctx>> {
+    pub(crate) fn retrieve_ty(&self, name: K) -> Option<Ty<'ctx>> {
         self.retrieve::<Ty<'static>>(name).map(|x| unsafe {
             std::mem::transmute::<Ty<'static>, Ty<'ctx>>(*x) /* the type annotations are to make sure the transmute is correct */ 
         })
     }
 
-    pub(crate) fn retrieve_cloned<T: Any + Clone>(&self, name: &'static str) -> Option<T> {
+    pub(crate) fn retrieve_cloned<T: Any + Clone>(&self, name: K) -> Option<T> {
         self.retrieve(name).cloned()
     }
 
-    pub(crate) fn retrieve_copied<T: Any + Copy>(&self, name: &'static str) -> Option<T> {
+    pub(crate) fn retrieve_copied<T: Any + Copy>(&self, name: K) -> Option<T> {
         self.retrieve(name).copied()
     }
 
@@ -118,13 +128,13 @@ impl<'ctx> Metadata<'ctx> {
     }
 }
 
-impl Default for Metadata<'_> {
+impl<K: MetadataKey> Default for Metadata<'_, K> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl IRPrint for Metadata<'_> {
+impl<K: MetadataKey> IRPrint for Metadata<'_, K> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         write!(w, "{{")?;
 
@@ -143,7 +153,7 @@ impl IRPrint for Metadata<'_> {
     }
 }
 
-impl Debug for Metadata<'_> {
+impl<K: MetadataKey> Debug for Metadata<'_, K> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.ir_print(f)
     }

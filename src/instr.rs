@@ -121,7 +121,7 @@ pub enum Cmp {
 #[derive(Clone)]
 pub struct Instr<'ctx> {
     pub kind: InstrK<'ctx>,
-    pub(crate) meta: Metadata<'ctx>
+    pub(crate) meta: Metadata<'ctx, &'static str>
 }
 
 impl<'ctx> Instr<'ctx> {
@@ -129,7 +129,7 @@ impl<'ctx> Instr<'ctx> {
         Self { kind, meta: Metadata::new() }
     }
 
-    pub(crate) fn new_with_meta(kind: InstrK<'ctx>, meta: Metadata<'ctx>) -> Self {
+    pub(crate) fn new_with_meta(kind: InstrK<'ctx>, meta: Metadata<'ctx, &'static str>) -> Self {
         Self { kind, meta }
     }
 
@@ -193,7 +193,7 @@ pub struct InstrBlock<'ctx> {
     /// The `return` of the function type describes what types are left on the stack
     /// once the block is exited.
     block_ty: Ty<'ctx>,
-    pub(crate) meta: Metadata<'ctx>
+    pub(crate) meta: Metadata<'ctx, &'static str>
 }
 
 impl<'ctx> InstrBlock<'ctx> {
