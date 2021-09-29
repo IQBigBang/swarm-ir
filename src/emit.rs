@@ -169,12 +169,20 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 }
                 InstrK::End => { if emit_end { out_f.instruction(wasm::Instruction::End); } },
                 InstrK::IfElse { then, r#else } => {
-                    let then_block_type = function.get_block(*then).unwrap().full_type();
-                    let block_type = wasm::BlockType::FunctionType(self.function_types[&then_block_type]);
+                    let block = function.get_block(*then).unwrap();
+                    let block_type = 
+                        if block.returns().len() == 1 {
+                            // If the block returns only a single value, prefer
+                            // to compile it as returning that one value
+                            // rather than a function type
+                            wasm::BlockType::Result(A::compile_type(block.returns()[0]))
+                        } else {
+                            wasm::BlockType::FunctionType(self.function_types[&block.full_type()])
+                        };
                     out_f.instruction(wasm::Instruction::If(block_type));
                     // compile the `then` block
                     // the block already ends with `end`, we don't need to add it
-                    self.compile_block(module, function, function.get_block(*then).unwrap(), out_f, false);
+                    self.compile_block(module, function, block, out_f, false);
                     
                     out_f.instruction(wasm::Instruction::Else);
                     match r#else {
