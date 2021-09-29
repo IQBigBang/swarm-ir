@@ -31,6 +31,21 @@ fn replace_2<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>
     }
 }
 
+/// Replace two consecutive instructions with something new
+fn replace_3<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>, i3: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>>> {
+    match (&i1.kind, &i2.kind, &i3.kind) {
+        // [GetFieldPtr, load-instr, Write] -> [load-instr, WriteAtOffset]
+        (InstrK::GetFieldPtr { struct_ty, field_idx }, _, InstrK::Write { ty }) => {
+            if i2.is_load() {
+                let offset = calc_struct_field_offset(*struct_ty, *field_idx);
+                Some(vec![
+                    i2.clone(),
+                    Instr::new_intrinsic(Intrinsics::WriteAtOffset { offset, ty: *ty })])
+            } else { None }
+        }
+        _ => None
+    }
+}
 // TODO: replace (GetFieldPtr, load-instruction, Write) with (load-instruction, WriteOffset)
 
 pub struct PeepholeOpt {}
@@ -58,7 +73,14 @@ impl<'ctx> FunctionPass<'ctx> for PeepholeOpt {
                         this_block_replacements.push((range, new_instrs));
                     }
                 }
-                // TODO: replace 3 instructions, 4 instructions etc.
+                // Check if there's 3 consecutive instructions left
+                if (i + 2) < block.body.len() {
+                    if let Some(new_instrs) = replace_3(&block.body[i], &block.body[i+1], &block.body[i+2]) {
+                        let range = i..(i + 3);
+                        this_block_replacements.push((range, new_instrs));
+                    }
+                }
+                // TODO: replace 4 instructions etc.
             }
 
             if !this_block_replacements.is_empty() {

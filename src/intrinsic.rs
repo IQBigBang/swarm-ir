@@ -20,6 +20,6 @@ pub(crate) enum Intrinsics<'ctx> {
     // These two instructions replace the GetFieldPtr & Read/Write combination
     /// Pop a memory address and read a value of type [`ty`] at memory_address + [`offset`]
     ReadAtOffset{ offset: usize, ty: Ty<'ctx> },
-    // Pop a value and a memory address and write the value of type [`ty`] at memory_address + [`offset`]
-    //WriteAtOffset{ offset: usize, ty: Ty<'ctx> },
+    /// Pop a value and a memory address and write the value of type [`ty`] at memory_address + [`offset`]
+    WriteAtOffset{ offset: usize, ty: Ty<'ctx> },
 }
