@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::{any::Any, fmt::Debug, marker::PhantomData};
 
 use crate::{irprint::IRPrint, ty::Ty};
 
@@ -6,8 +6,8 @@ trait MetadataRequiredTraits {
     fn as_any(&self) -> &dyn Any;
     fn as_ir_print(&self) -> &dyn IRPrint;
     fn clone_into_box(&self) -> Box<dyn MetadataRequiredTraits>;
-    //fn as_clone(&self) -> &dyn ObjectSafeClone;
 }
+
 impl<T: Any + IRPrint + Clone> MetadataRequiredTraits for T {
     fn as_any(&self) -> &dyn Any { self }
     fn as_ir_print(&self) -> &dyn IRPrint { self }
@@ -40,17 +40,17 @@ impl Clone for MetadataNode {
 #[repr(transparent)]
 #[allow(clippy::type_complexity)]
 #[derive(Clone)]
-pub(crate) struct Metadata(Option<Box<MetadataNode>>);
+pub(crate) struct Metadata<'ctx>(Option<Box<MetadataNode>>, PhantomData<Ty<'ctx>>);
 
-impl Metadata {
+impl<'ctx> Metadata<'ctx> {
     #[inline(always)]
     pub(crate) fn new() -> Self {
-        Metadata(None)
+        Metadata(None, PhantomData)
     }
 
-    pub(crate) fn insert_ty(&mut self, name: &'static str, value: Ty<'_>) {
+    pub(crate) fn insert_ty(&mut self, name: &'static str, value: Ty<'ctx>) {
         self.insert::<Ty<'static>>(name, unsafe { 
-            std::mem::transmute::<Ty<'_>, Ty<'static>>(value) /* the type annotations are to make sure the transmute is correct */ 
+            std::mem::transmute::<Ty<'ctx>, Ty<'static>>(value) /* the type annotations are to make sure the transmute is correct */ 
         });
     }
 
@@ -65,11 +65,11 @@ impl Metadata {
         self.0 = Some(Box::new(first));
     }
 
-    fn find_value<'a>(node: &'a MetadataNode, key: &'static str) -> Option<&'a Box<dyn MetadataRequiredTraits>> {
+    fn find_value<'a>(node: &'a MetadataNode, key: &'static str) -> Option<&'a dyn MetadataRequiredTraits> {
         let mut current = node;
         loop {
             if current.key == key {
-                return Some(&current.val)
+                return Some(&*current.val)
             }
             if let Some(next) = &current.next {
                 current = &*next;
@@ -94,25 +94,18 @@ impl Metadata {
         }
     }
 
-    pub(crate) fn retrieve_ty<'ctx>(&self, name: &'static str) -> Option<Ty<'ctx>> {
+    pub(crate) fn retrieve_ty(&self, name: &'static str) -> Option<Ty<'ctx>> {
         self.retrieve::<Ty<'static>>(name).map(|x| unsafe {
             std::mem::transmute::<Ty<'static>, Ty<'ctx>>(*x) /* the type annotations are to make sure the transmute is correct */ 
         })
     }
 
     pub(crate) fn retrieve_cloned<T: Any + Clone>(&self, name: &'static str) -> Option<T> {
-        match &self.0 {
-            None => None, // no items => you can't retrieve anything
-            Some(first) => {
-                let retrieved = Metadata::find_value(&*first, name);
-                match retrieved {
-                    Some(obj) => {
-                        obj.as_any().downcast_ref().cloned()
-                    },
-                    None => None
-                }
-            }
-        }
+        self.retrieve(name).cloned()
+    }
+
+    pub(crate) fn retrieve_copied<T: Any + Copy>(&self, name: &'static str) -> Option<T> {
+        self.retrieve(name).copied()
     }
 
     /// Remove all keys and values and deallocate
@@ -125,13 +118,13 @@ impl Metadata {
     }
 }
 
-impl Default for Metadata {
+impl Default for Metadata<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl IRPrint for Metadata {
+impl IRPrint for Metadata<'_> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         write!(w, "{{")?;
 
@@ -150,7 +143,7 @@ impl IRPrint for Metadata {
     }
 }
 
-impl Debug for Metadata {
+impl Debug for Metadata<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.ir_print(f)
     }
@@ -159,7 +152,7 @@ impl Debug for Metadata {
 
 #[cfg(test)]
 mod tests {
-    use crate::{irprint::IRPrint, module::{Module, WasmModuleConf}, ty::Type};
+    use crate::{irprint::IRPrint, module::{Module, WasmModuleConf}, ty::Type, ty::Ty};
 
     use super::Metadata;
 
