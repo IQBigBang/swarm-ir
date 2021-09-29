@@ -9,12 +9,13 @@ edition = "2018"
 [dependencies]
 libintern = "0.6"
 wasm-encoder = "0.6"
-# TODO: remove these, only used for testing
-# wasmprinter = "0.2"
-# wasmparser = "0.80"
 bit-set = "0.5"
 logos = { version = "0.12", optional = true }
 
+[dev-dependencies]
+wat = "1.0"
+wasmparser = "0.80"
+wasmprinter = "0.2"
 
 [features]
 c-api = []

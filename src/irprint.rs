@@ -146,8 +146,9 @@ impl IRPrint for BlockId {
 
 impl<'ctx> IRPrint for InstrBlock<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
-        write!(w, "b{}:", self.idx.id())?;
-        write!(w, " (tag={})", match self.tag {
+        write!(w, "b{}: ", self.idx.id())?;
+        self.full_type().ir_print(w)?;
+        write!(w, " tag={}", match self.tag {
             BlockTag::Undefined => "undefined",
             BlockTag::Main => "main",
             BlockTag::IfElse => "if_else",
