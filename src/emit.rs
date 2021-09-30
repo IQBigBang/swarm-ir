@@ -114,7 +114,13 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::FMul => { out_f.instruction(wasm::Instruction::F32Mul); },
                 InstrK::FDiv => { out_f.instruction(wasm::Instruction::F32Div); },
                 InstrK::Itof => { out_f.instruction(wasm::Instruction::F32ConvertI32S); },
-                InstrK::Ftoi => { out_f.instruction(wasm::Instruction::I32TruncSatF32S); },
+                InstrK::Ftoi => { 
+                    if module.conf.use_saturating_ftoi {
+                        out_f.instruction(wasm::Instruction::I32TruncSatF32S);
+                    } else {
+                        out_f.instruction(wasm::Instruction::I32TruncF32S); 
+                    }
+                },
                 InstrK::ICmp(cmp) => { match cmp {
                     Cmp::Eq => out_f.instruction(wasm::Instruction::I32Eq),
                     Cmp::Ne => out_f.instruction(wasm::Instruction::I32Neq),

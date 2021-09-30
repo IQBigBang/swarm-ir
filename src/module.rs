@@ -23,12 +23,18 @@ pub struct Module<'ctx> {
 
 /// Configuration of the webassembly module
 pub struct WasmModuleConf {
-    pub initial_memory_size: u32
+    /// The initial WebAssembly memory size in units of pages
+    pub initial_memory_size: u32,
+    /// If true, the Float-to-int conversions will be saturating
+    /// Otherwise, they will trap on unexpected values
+    ///
+    /// For more details, see the WebAssembly documentation on `iNN.trunc_fNN` and `iNN.trunc_sat_fNN`.
+    pub use_saturating_ftoi: bool,
 }
 
 impl Default for WasmModuleConf {
     fn default() -> Self {
-        WasmModuleConf { initial_memory_size: 1 }
+        WasmModuleConf { initial_memory_size: 1, use_saturating_ftoi: true }
     }
 }
 

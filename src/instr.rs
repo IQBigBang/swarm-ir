@@ -38,7 +38,8 @@ pub enum InstrK<'ctx> {
     Itof,
     /// Convert a floating-point number to a signed integer.
     ///
-    /// Compiles to the `i64.trunc_sat_f32_s` instruction. 
+    /// Compiles to the `i32.trunc_f32_s` or `i32.trunc_sat_f32_s` instruction
+    /// depending on the IR Module configuration.
     /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-trunc-sat-s>
     Ftoi,
     /// Compare two signed integers. The result is an integer.
