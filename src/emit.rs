@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, intrinsic::Intrinsics, module::Module, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, intrinsic::Intrinsics, module::Module, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
@@ -103,32 +103,25 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         emit_end: bool) {
         for instr in &block.body {
             match &instr.kind {
-                InstrK::LdInt(val) => { out_f.instruction(wasm::Instruction::I32Const(*val)); },
+                InstrK::LdInt(val, _) => { out_f.instruction(wasm::Instruction::I32Const(*val as i32)); },
                 InstrK::LdFloat(val) => { out_f.instruction(wasm::Instruction::F32Const(*val)); },
-                InstrK::IAdd => { out_f.instruction(wasm::Instruction::I32Add); },
-                InstrK::ISub => { out_f.instruction(wasm::Instruction::I32Sub); },
-                InstrK::IMul => { out_f.instruction(wasm::Instruction::I32Mul); },
-                InstrK::IDiv => { out_f.instruction(wasm::Instruction::I32DivS); },
                 InstrK::FAdd => { out_f.instruction(wasm::Instruction::F32Add); },
                 InstrK::FSub => { out_f.instruction(wasm::Instruction::F32Sub); },
                 InstrK::FMul => { out_f.instruction(wasm::Instruction::F32Mul); },
                 InstrK::FDiv => { out_f.instruction(wasm::Instruction::F32Div); },
-                InstrK::Itof => { out_f.instruction(wasm::Instruction::F32ConvertI32S); },
-                InstrK::Ftoi => { 
-                    if module.conf.use_saturating_ftoi {
-                        out_f.instruction(wasm::Instruction::I32TruncSatF32S);
-                    } else {
-                        out_f.instruction(wasm::Instruction::I32TruncF32S); 
-                    }
+                // these are all numerics WITH metadata
+                InstrK::IAdd | InstrK::ISub | InstrK::IMul | InstrK::IDiv |
+                InstrK::Itof | InstrK::ICmp(_) | InstrK::IConv { target: _ } => {
+                    let bws = instr.meta.retrieve_copied(key!("bws")).unwrap();
+                    let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
+                    for i in instrs { out_f.instruction(i); }
                 },
-                InstrK::ICmp(cmp) => { match cmp {
-                    Cmp::Eq => out_f.instruction(wasm::Instruction::I32Eq),
-                    Cmp::Ne => out_f.instruction(wasm::Instruction::I32Neq),
-                    Cmp::Lt => out_f.instruction(wasm::Instruction::I32LtS),
-                    Cmp::Le => out_f.instruction(wasm::Instruction::I32LeS),
-                    Cmp::Gt => out_f.instruction(wasm::Instruction::I32GtS),
-                    Cmp::Ge => out_f.instruction(wasm::Instruction::I32GeS),
-                }; }
+                InstrK::Ftoi { int_ty } => { 
+                    // numeric without metadata, calculate bws from the explicit type
+                    let bws = type_to_bws(*int_ty).unwrap();
+                    let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
+                    for i in instrs { out_f.instruction(i); }
+                },
                 InstrK::FCmp(cmp) => { match cmp {
                     Cmp::Eq => out_f.instruction(wasm::Instruction::F32Eq),
                     Cmp::Ne => out_f.instruction(wasm::Instruction::F32Neq),
@@ -200,6 +193,14 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     }
                 }
                 InstrK::Read { ty } => {
+                    if ty.is_int() {
+                        // use the "numeric" module functions for compilation
+                        let bws = type_to_bws(*ty).unwrap();
+                        let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
+                        for i in instrs { out_f.instruction(i); }
+                        continue
+                    }
+
                     let mem_arg = wasm::MemArg {
                         offset: 0,
                         align: A::type_alignment(*ty) as u32,
@@ -207,9 +208,6 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     };
 
                     match A::compile_type(*ty) {
-                        wasm::ValType::I32 => {
-                            out_f.instruction(wasm::Instruction::I32Load(mem_arg));
-                        },
                         wasm::ValType::F32 => {
                             out_f.instruction(wasm::Instruction::F32Load(mem_arg));
                         },
@@ -217,6 +215,14 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     }
                 }
                 InstrK::Write { ty } => {
+                    if ty.is_int() {
+                        // use the "numeric" module functions for compilation
+                        let bws = type_to_bws(*ty).unwrap();
+                        let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
+                        for i in instrs { out_f.instruction(i); }
+                        continue
+                    }
+
                     let mem_arg = wasm::MemArg {
                         offset: 0,
                         align: A::type_alignment(*ty) as u32,
@@ -224,9 +230,6 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     };
 
                     match A::compile_type(*ty) {
-                        wasm::ValType::I32 => {
-                            out_f.instruction(wasm::Instruction::I32Store(mem_arg));
-                        },
                         wasm::ValType::F32 => {
                             out_f.instruction(wasm::Instruction::F32Store(mem_arg));
                         },
@@ -295,42 +298,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     out_f.instruction(wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx as u32));
                 }
                 InstrK::Intrinsic(i) => {
-                    match &i.0 {
-                        Intrinsics::ReadAtOffset { offset, ty } => {
-                            let mem_arg = wasm::MemArg {
-                                offset: *offset as u64,
-                                align: A::type_alignment(*ty) as u32,
-                                memory_index: 0,
-                            };
-        
-                            match A::compile_type(*ty) {
-                                wasm::ValType::I32 => {
-                                    out_f.instruction(wasm::Instruction::I32Load(mem_arg));
-                                },
-                                wasm::ValType::F32 => {
-                                    out_f.instruction(wasm::Instruction::F32Load(mem_arg));
-                                },
-                                _ => unimplemented!()
-                            }
-                        },
-                        Intrinsics::WriteAtOffset { offset, ty } => {
-                            let mem_arg = wasm::MemArg {
-                                offset: *offset as u64,
-                                align: A::type_alignment(*ty) as u32,
-                                memory_index: 0,
-                            };
-        
-                            match A::compile_type(*ty) {
-                                wasm::ValType::I32 => {
-                                    out_f.instruction(wasm::Instruction::I32Store(mem_arg));
-                                },
-                                wasm::ValType::F32 => {
-                                    out_f.instruction(wasm::Instruction::F32Store(mem_arg));
-                                },
-                                _ => unimplemented!()
-                            }
-                        },
-                    }
+                    // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types
+                    unimplemented!()
                 }
             };
         }

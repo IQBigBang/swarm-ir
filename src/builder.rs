@@ -111,7 +111,7 @@ impl<'ctx> InstrBuilder<'ctx> for FunctionBuilder<'ctx> {
 pub trait InstrBuilder<'ctx> {
     fn instr(&mut self, i: InstrK<'ctx>);
 
-    fn i_ld_int(&mut self, val: i32) { self.instr(InstrK::LdInt(val)) }
+    fn i_ld_int(&mut self, val: u32, int_ty: Ty<'ctx>) { self.instr(InstrK::LdInt(val, int_ty)) }
     fn i_ld_float(&mut self, val: f32) { self.instr(InstrK::LdFloat(val)) }
     fn i_iadd(&mut self) { self.instr(InstrK::IAdd) }
     fn i_isub(&mut self) { self.instr(InstrK::ISub) }
@@ -122,7 +122,8 @@ pub trait InstrBuilder<'ctx> {
     fn i_fmul(&mut self) { self.instr(InstrK::FMul) }
     fn i_fdiv(&mut self) { self.instr(InstrK::FDiv) }
     fn i_itof(&mut self) { self.instr(InstrK::Itof) }
-    fn i_ftoi(&mut self) { self.instr(InstrK::Ftoi) }
+    fn i_ftoi(&mut self, int_ty: Ty<'ctx>) { self.instr(InstrK::Ftoi { int_ty }) }
+    fn i_iconv(&mut self, target: Ty<'ctx>) { self.instr(InstrK::IConv { target }) }
     fn i_icmp(&mut self, cmp: Cmp) { self.instr(InstrK::ICmp(cmp)) }
     fn i_fcmp(&mut self, cmp: Cmp) { self.instr(InstrK::FCmp(cmp)) }
     fn i_call(&mut self, func_name: String) { self.instr(InstrK::CallDirect { func_name }) }

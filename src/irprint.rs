@@ -1,4 +1,4 @@
-use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::{Global, Module}, ty::{Ty, Type}};
+use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::{Global, Module}, numerics::BitWidthSign, ty::{Ty, Type}};
 
 pub trait IRPrint {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result;
@@ -8,6 +8,11 @@ impl<'ctx> IRPrint for Type<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         match self {
             Type::Int32 => write!(w, "int32"),
+            Type::UInt32 => write!(w, "uint32"),
+            Type::Int16 => write!(w, "int16"),
+            Type::UInt16 => write!(w, "uint16"),
+            Type::Int8 => write!(w, "int8"),
+            Type::UInt8 => write!(w, "uint8"),
             Type::Float32 => write!(w, "float32"),
             Type::Ptr => write!(w, "ptr"),
             Type::Func { args, ret: rets } => {
@@ -59,7 +64,11 @@ impl<'ctx> IRPrint for Ty<'ctx> {
 impl<'ctx> IRPrint for Instr<'ctx> {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
         match &self.kind {
-            InstrK::LdInt(n) => write!(w, "ld.int {}", n),
+            InstrK::LdInt(n, ty) => {
+                write!(w, "ld.")?;
+                ty.ir_print(w)?;
+                write!(w, " {}", n)
+            }
             InstrK::LdFloat(f) => write!(w, "ld.float {}", f),
             InstrK::IAdd => write!(w, "iadd"),
             InstrK::ISub => write!(w, "isub"),
@@ -70,7 +79,10 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             InstrK::FMul => write!(w, "fmul"),
             InstrK::FDiv => write!(w, "fdiv"),
             InstrK::Itof => write!(w, "itof"),
-            InstrK::Ftoi => write!(w, "ftoi"),
+            InstrK::Ftoi { int_ty } => {
+                write!(w, "ftoi to ")?;
+                int_ty.ir_print(w)
+            },
             InstrK::ICmp(cmp) => match cmp {
                 Cmp::Eq => write!(w, "icmp.eq"),
                 Cmp::Ne => write!(w, "icmp.ne"),
@@ -87,6 +99,10 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 Cmp::Gt => write!(w, "fcmp.gt"),
                 Cmp::Ge => write!(w, "fcmp.ge"),
             },
+            InstrK::IConv { target } => {
+                write!(w, "iconv to ")?;
+                target.ir_print(w)
+            }
             InstrK::CallDirect { func_name } => write!(w, "call \"{}\"", func_name),
             InstrK::LdLocal { idx } => write!(w, "ld.loc #{}", idx),
             InstrK::StLocal { idx } => write!(w, "st.loc #{}", idx),
@@ -219,5 +235,18 @@ impl<'ctx> IRPrint for Module<'ctx> {
             f.ir_print(w)?;
         }
         Ok(())
+    }
+}
+
+impl IRPrint for BitWidthSign {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        match self {
+            BitWidthSign::S32 => write!(w, "s32"),
+            BitWidthSign::U32 => write!(w, "u32"),
+            BitWidthSign::S16 => write!(w, "s16"),
+            BitWidthSign::U16 => write!(w, "u16"),
+            BitWidthSign::S8 => write!(w, "s8"),
+            BitWidthSign::U8 => write!(w, "u8"),
+        }
     }
 }

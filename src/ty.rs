@@ -6,7 +6,18 @@ use crate::irprint::IRPrint;
 
 #[derive(PartialEq, Eq, Hash)]
 pub enum Type<'ctx> {
+    /// A signed 8-bit integer
+    Int8,
+    /// An unsigned 8-bit integer
+    UInt8,
+    /// A signed 16-bit integer
+    Int16,
+    /// An unsigned 16-bit integer
+    UInt16,
+    /// A signed 32-bit integer
     Int32,
+    /// An unsigned 32-bit integer
+    UInt32,
     Float32,
     Func { args: Vec<Ty<'ctx>>, ret: Vec<Ty<'ctx>> },
     Ptr,
@@ -15,7 +26,7 @@ pub enum Type<'ctx> {
 
 impl<'ctx> Type<'ctx> {
     pub fn is_int(&self) -> bool {
-        matches!(self, Type::Int32)
+        matches!(self, Type::Int32 | Type::UInt32 | Type::Int16 | Type::UInt16 | Type::Int8 | Type::UInt8)
     }
 
     pub fn is_float(&self) -> bool {

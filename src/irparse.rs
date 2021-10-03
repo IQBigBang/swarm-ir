@@ -10,6 +10,16 @@ pub enum IrToken {
     Int32,
     #[token("float32")]
     Float32,
+    #[token("uint32")]
+    UInt32,
+    #[token("int16")]
+    Int16,
+    #[token("uint16")]
+    UInt16,
+    #[token("int8")]
+    Int8,
+    #[token("uint8")]
+    UInt8,
     #[token("ptr")]
     Ptr,
     #[token("struct")]
@@ -109,9 +119,29 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
 
     fn parse_instr(&mut self) -> Result<Instr<'ctx>, IrParseError> {
         let i = match self.expect(IrToken::Identifier)? {
-            "ld.int" => {
+            "ld.int32" => {
                 let n = self.expect(IrToken::Int)?.parse().unwrap();
-                Instr::new(InstrK::LdInt(n))
+                Instr::new(InstrK::LdInt(n, self.module.int32t()))
+            }
+            "ld.uint32" => {
+                let n = self.expect(IrToken::Int)?.parse().unwrap();
+                Instr::new(InstrK::LdInt(n, self.module.uint32t()))
+            }
+            "ld.int16" => {
+                let n = self.expect(IrToken::Int)?.parse().unwrap();
+                Instr::new(InstrK::LdInt(n, self.module.int16t()))
+            }
+            "ld.uint16" => {
+                let n = self.expect(IrToken::Int)?.parse().unwrap();
+                Instr::new(InstrK::LdInt(n, self.module.uint16t()))
+            }
+            "ld.int8" => {
+                let n = self.expect(IrToken::Int)?.parse().unwrap();
+                Instr::new(InstrK::LdInt(n, self.module.int8t()))
+            }
+            "ld.uint8" => {
+                let n = self.expect(IrToken::Int)?.parse().unwrap();
+                Instr::new(InstrK::LdInt(n, self.module.uint8t()))
             }
             "ld.float" => {
                 let f = self.expect(IrToken::Float)?.parse().unwrap();
@@ -126,7 +156,12 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
             "fmul" => Instr::new(InstrK::FMul),
             "fdiv" => Instr::new(InstrK::FDiv),
             "itof" => Instr::new(InstrK::Itof),
-            "ftoi" => Instr::new(InstrK::Ftoi),
+            "ftoi" => {
+                let t = self.expect(IrToken::Identifier)?;
+                if t != "to" { return Err(IrParseError::MalformedIdentifier { got: t.to_owned() }) }
+                let int_ty = self.parse_type()?;
+                Instr::new(InstrK::Ftoi { int_ty })
+            },
             "icmp.eq" => Instr::new(InstrK::ICmp(Cmp::Eq)),
             "icmp.ne" => Instr::new(InstrK::ICmp(Cmp::Ne)),
             "icmp.lt" => Instr::new(InstrK::ICmp(Cmp::Lt)),
@@ -139,6 +174,12 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
             "fcmp.le" => Instr::new(InstrK::FCmp(Cmp::Le)),
             "fcmp.gt" => Instr::new(InstrK::FCmp(Cmp::Gt)),
             "fcmp.ge" => Instr::new(InstrK::FCmp(Cmp::Ge)),
+            "iconv" => {
+                let t = self.expect(IrToken::Identifier)?;
+                if t != "to" { return Err(IrParseError::MalformedIdentifier { got: t.to_owned() }) }
+                let target = self.parse_type()?;
+                Instr::new(InstrK::IConv { target })
+            },
             "call" => {
                 if self.peek(IrToken::Identifier) {
                     // call indirect
@@ -166,6 +207,8 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
             },
             "end" => Instr::new(InstrK::End),
             "bitcast" => {
+                let t = self.expect(IrToken::Identifier)?;
+                if t != "to" { return Err(IrParseError::MalformedIdentifier { got: t.to_owned() }) }
                 let target = self.parse_type()?;
                 Instr::new(InstrK::Bitcast { target })
             }
@@ -284,6 +327,21 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
         if self.peek(IrToken::Int32) {
             self.next();
             Ok(self.module.int32t())
+        } else if self.peek(IrToken::UInt32) {
+            self.next();
+            Ok(self.module.uint32t())
+        } else if self.peek(IrToken::Int16) {
+            self.next();
+            Ok(self.module.int16t())
+        } else if self.peek(IrToken::UInt16) {
+            self.next();
+            Ok(self.module.uint16t())
+        } else if self.peek(IrToken::Int8) {
+            self.next();
+            Ok(self.module.int8t())
+        } else if self.peek(IrToken::UInt8) {
+            self.next();
+            Ok(self.module.uint8t())
         } else if self.peek(IrToken::Float32) {
             self.next();
             Ok(self.module.float32t())

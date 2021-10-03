@@ -126,7 +126,7 @@ mod tests {
         );
         let arg0 = builder.get_arg(0);
         builder.i_ld_local(arg0);
-        builder.i_ld_int(1);
+        builder.i_ld_int(1, top.int32t());
         builder.i_iadd();
         builder.i_end();
 
@@ -141,12 +141,12 @@ mod tests {
                 m.insert(0.into(), vec![
                     // replace the first two instructions with LdInt 3, LdLocal 0
                     (0..2, vec![
-                        Instr::new(InstrK::LdInt(3)),
+                        Instr::new(InstrK::LdInt(3, top.int32t())),
                         Instr::new(InstrK::LdLocal { idx: 0 })
                     ]),
                     // insert LdInt 4, LdSub before the End instr
                     (3..3, vec![
-                        Instr::new(InstrK::LdInt(4)),
+                        Instr::new(InstrK::LdInt(4, top.int32t())),
                         Instr::new(InstrK::ISub)
                     ])
                 ]);
@@ -158,10 +158,10 @@ mod tests {
 
         let instr_kinds: Vec<InstrK<'_>> = top.get_function("func").unwrap().entry_block().body.iter().map(|i| i.kind.clone()).collect();
         assert_eq!(instr_kinds, vec![
-            InstrK::LdInt(3),
+            InstrK::LdInt(3, top.int32t()),
             InstrK::LdLocal { idx: 0 },
             InstrK::IAdd,
-            InstrK::LdInt(4),
+            InstrK::LdInt(4, top.int32t()),
             InstrK::ISub,
             InstrK::End
         ]);

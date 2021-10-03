@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, Instr, InstrBlock, InstrK}, pass::{MutableFunctionPass}, ty::{Ty, Type}};
+use crate::{instr::{BlockId, Instr, InstrBlock, InstrK}, numerics::{BitWidthSign, do_int_types_match, type_to_bws}, pass::{MutableFunctionPass}, ty::{Ty, Type}};
 
 pub struct Verifier {}
 
@@ -8,7 +8,8 @@ pub struct VerifierMutInfo<'ctx> {
     /// Types of the functions in CallIndirect instructions
     call_indirect_function_types: HashMap<(BlockId, usize), Ty<'ctx>>,
     /// Types of the `from`s of BitCast instructions
-    bitcast_source_types: HashMap<(BlockId, usize), Ty<'ctx>>
+    bitcast_source_types: HashMap<(BlockId, usize), Ty<'ctx>>,
+    numeric_instrs_data: HashMap<(BlockId, usize), BitWidthSign>
 }
 
 impl<'ctx> Verifier {
@@ -27,25 +28,67 @@ impl<'ctx> Verifier {
 
         for (i, instr) in block.body.iter().enumerate() {
             match &instr.kind {
-                InstrK::LdInt(_) => stack.push(module.int32t()),
+                InstrK::LdInt(val, ty) => {
+                    if !ty.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: module.int32t(),
+                            actual: *ty,
+                            reason: "LdInt instruction"
+                        })
+                    }
+                    // Also verify the integer doesn't overflow the type
+                    match &**ty {
+                        Type::Int8 => if (*val as i32 > i8::MAX as i32) || ((*val as i32) < i8::MIN as i32) {
+                            return Err(VerifyError::ConstIntOverflow { value: *val, ty: *ty })
+                        },
+                        Type::UInt8 => if *val as i32 > u8::MAX as i32 {
+                            return Err(VerifyError::ConstIntOverflow { value: *val, ty: *ty })
+                        },
+                        Type::Int16 => if (*val as i32 > i16::MAX as i32) || ((*val as i32) < i16::MIN as i32) {
+                            return Err(VerifyError::ConstIntOverflow { value: *val, ty: *ty })
+                        },
+                        Type::UInt16 => if *val as i32 > u16::MAX as i32 {
+                            return Err(VerifyError::ConstIntOverflow { value: *val, ty: *ty })
+                        },
+                        Type::Int32 | Type::UInt32 => { /* can't overflow because IT IS a u32 */ },
+                        _ => unreachable!()
+                    }
+                    stack.push(*ty);
+                }
                 InstrK::LdFloat(_) => stack.push(module.float32t()),
                 InstrK::IAdd | InstrK::ISub | InstrK::IMul | InstrK::IDiv | InstrK::ICmp(_) => {
                     let lhs = stack.pop().ok_or(VerifyError::StackUnderflow)?;
                     let rhs = stack.pop().ok_or(VerifyError::StackUnderflow)?;
 
-                    match (&*lhs, &*rhs) {
-                        (Type::Int32, Type::Int32) => stack.push(module.int32t()),
-                        (Type::Int32, _) => return Err(VerifyError::InvalidType { 
-                            expected: module.int32t(),
-                            actual: rhs,
-                            reason: "Integer arithmetic operation"
-                        }),
-                        _ => return Err(VerifyError::InvalidType { 
-                            expected: module.int32t(),
+                    if !lhs.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: if rhs.is_int() { rhs } else { module.int32t() /* default to i32 */ },
                             actual: lhs,
-                            reason: "Integer arithmetic operation"
+                            reason: "Integer numeric operation"
+                        })
+                    } else if !rhs.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: if lhs.is_int() { lhs } else { module.int32t() /* default to i32 */ },
+                            actual: rhs,
+                            reason: "Integer numeric operation"
                         })
                     }
+                    // Now they're both surely integers
+                    if !do_int_types_match(lhs, rhs) {
+                        return Err(VerifyError::IntegerSizeMismatch {left: lhs, right: rhs})
+                    }
+
+                    // The metadata stores the operand type, not necessarily the result type (see below)
+                    out_info.numeric_instrs_data.insert((block.idx, i), type_to_bws(lhs).unwrap());
+                    
+                    let result_ty = if let InstrK::ICmp(_) = &instr.kind {
+                        // ICmp returns a "boolean", which is always an int32
+                        module.int32t()
+                    } else {
+                        // The lhs and rhs types are the same as the result
+                        lhs
+                    };
+                    stack.push(result_ty);
                 },
                 InstrK::FAdd | InstrK::FSub | InstrK::FMul | InstrK::FDiv => {
                     let lhs = stack.pop().ok_or(VerifyError::StackUnderflow)?;
@@ -92,9 +135,11 @@ impl<'ctx> Verifier {
                             reason: "Itof instruction"
                         })
                     }
+                    // Save integer numeric metadata
+                    out_info.numeric_instrs_data.insert((block.idx, i), type_to_bws(val).unwrap());
                     stack.push(module.float32t())
                 }
-                InstrK::Ftoi => {
+                InstrK::Ftoi { int_ty } => {
                     let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
                     if !val.is_float() {
                         return Err(VerifyError::InvalidType { 
@@ -103,7 +148,37 @@ impl<'ctx> Verifier {
                             reason: "Itof instruction"
                         })
                     }
-                    stack.push(module.int32t())
+                    if !int_ty.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: module.int32t(), // default to int32
+                            actual: *int_ty,
+                            reason: "Itof instruction target type"
+                        })
+                    }
+                    // Save integer numeric metadata
+                    out_info.numeric_instrs_data.insert((block.idx, i), type_to_bws(*int_ty).unwrap());
+                    stack.push(*int_ty)
+                }
+                InstrK::IConv { target } => {
+                    let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !val.is_int() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.int32t(),
+                            actual: val,
+                            reason: "IConv instruction"
+                        })
+                    }
+                    if !target.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: module.int32t(), // default to int32
+                            actual: *target,
+                            reason: "IConv instruction target type"
+                        })
+                    }
+                    // Save integer numeric metadata
+                    // IConv needs to save its source type, the target type is explicitly specified
+                    out_info.numeric_instrs_data.insert((block.idx, i), type_to_bws(val).unwrap());
+                    stack.push(*target)
                 }
                 InstrK::CallDirect { func_name } => {
                     match module.get_function(func_name) {
@@ -434,7 +509,8 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
 
         let mut info = VerifierMutInfo {
             call_indirect_function_types: HashMap::new(),
-            bitcast_source_types: HashMap::new()
+            bitcast_source_types: HashMap::new(),
+            numeric_instrs_data: HashMap::new()
         };
 
         // do this before verifying the blocks themselves
@@ -481,6 +557,12 @@ impl<'ctx> MutableFunctionPass<'ctx> for Verifier {
     
                     instr.meta.insert_ty(key!("from"), source_ty)
                 }
+
+                if info.numeric_instrs_data.contains_key(&key) {
+                    let bws = info.numeric_instrs_data[&key];
+
+                    instr.meta.insert(key!("bws"), bws)
+                }
             }
 
         }
@@ -504,5 +586,7 @@ pub enum VerifyError<'ctx> {
     UnexpectedStructType { r#where: &'static str },
     GetFieldPtrExpectedStructType,
     OutOfBoundsStructIndex,
-    UndefinedGlobal { name: String }
+    UndefinedGlobal { name: String },
+    IntegerSizeMismatch { left: Ty<'ctx>, right: Ty<'ctx>},
+    ConstIntOverflow { value: u32, ty: Ty<'ctx> },
 }

@@ -12,6 +12,7 @@ macro_rules! key {
     ("ty") => { crate::metadata::Key(0) };
     ("from") => { crate::metadata::Key(1) };
     ("parent") => { crate::metadata::Key(2) };
+    ("bws") => { crate::metadata::Key(3) }
 }
 
 // The opposite of the macro
@@ -21,6 +22,7 @@ impl From<&Key> for &'static str {
             0 => "ty",
             1 => "from",
             2 => "parent",
+            3 => "bws",
             _ => unreachable!()
         }
     }

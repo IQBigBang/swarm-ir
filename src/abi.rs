@@ -32,7 +32,8 @@ impl Abi for Wasm32Abi {
 
     fn compile_type(ty: Ty<'_>) -> Self::BackendType {
         match &*ty {
-            Type::Int32 => wasm::ValType::I32,
+            Type::Int32 | Type::UInt32 | Type::Int16 | Type::UInt16 | Type::Int8 | Type::UInt8 
+                => wasm::ValType::I32,
             Type::Float32 => wasm::ValType::F32,
             // Function "types" are actually integer indexes into the global function table
             Type::Func { args: _, ret: _ } => wasm::ValType::I32,
@@ -45,7 +46,9 @@ impl Abi for Wasm32Abi {
 
     fn type_sizeof(ty: Ty<'_>) -> usize {
         match &*ty {
-            Type::Int32 => 4,
+            Type::Int8  | Type::UInt8  => 1,
+            Type::Int16 | Type::UInt16 => 2,
+            Type::Int32 | Type::UInt32 => 4,
             Type::Float32 => 4,
             // actually an int32, thus 4
             Type::Func { args:_, ret:_ } => 4,
@@ -58,7 +61,9 @@ impl Abi for Wasm32Abi {
 
     fn type_alignment(ty: Ty<'_>) -> usize {
         match &*ty {
-            Type::Int32 => 2,
+            Type::Int8  | Type::UInt8  => 0,
+            Type::Int16 | Type::UInt16 => 1,
+            Type::Int32 | Type::UInt32 => 2,
             Type::Float32 => 2,
             Type::Func { args:_, ret:_ } => 2,
             Type::Ptr => 2,
@@ -107,39 +112,44 @@ mod tests {
 
     #[test]
     pub fn struct_test() {
+        // TODO: add more tests
         let mut m = Module::new(WasmModuleConf::default());
 
         let struct_t1 = m.intern_type(Type::Struct { fields: vec![
-            m.int32t(), m.int32t()
+            m.int16t(), /*2-byte padding */ m.int32t(), m.int8t(), m.uint8t()
         ] });
 
         let struct_t2 = m.intern_type(Type::Struct { fields: vec![
         ] });
 
         let struct_t3 = m.intern_type(Type::Struct { fields: vec![
-            struct_t2, struct_t1, m.float32t(), struct_t2
+            struct_t2, struct_t1, /* 2-byte padding*/ m.float32t(), struct_t1
         ] });
 
-        assert_eq!(Wasm32Abi::type_sizeof(struct_t1), 8);
+        assert_eq!(Wasm32Abi::type_sizeof(struct_t1), 10);
         assert_eq!(Wasm32Abi::type_alignment(struct_t1), 2); // equal to alignment of int32
-        // field 0 (int32) - offset 0
+        // field 0 (int16) - offset 0
         assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t1), 0), 0);
         // field 1 (int32) - offset 4
         assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t1), 1), 4);
+        // field 2 (int8) - offset 8
+        assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t1), 2), 8);
+        // field 3 (uint8) - offset 9
+        assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t1), 3), 9);
 
         assert_eq!(Wasm32Abi::type_sizeof(struct_t2), 0);
         assert_eq!(Wasm32Abi::type_alignment(struct_t2), 0);
 
-        assert_eq!(Wasm32Abi::type_sizeof(struct_t3), 12);
+        assert_eq!(Wasm32Abi::type_sizeof(struct_t3), 26);
         assert_eq!(Wasm32Abi::type_alignment(struct_t3), 2);
         // field 0 (struct2) - offset 0
         assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t3), 0), 0);
         // field 1 (struct1) - also offset 0
         assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t3), 1), 0);
-        // field 2 (float32) - offset 8
-        assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t3), 2), 8);
-        // field 0 (struct2) - offset 12
-        assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t3), 3), 12);
+        // field 2 (float32) - offset 12
+        assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t3), 2), 12);
+        // field 0 (struct2) - offset 16
+        assert_eq!(Wasm32Abi::struct_field_offset(helper(&struct_t3), 3), 16);
     }
 
     fn helper<'a, 'ctx>(ty: &'a Ty<'ctx>) -> &'a [Ty<'ctx>] {

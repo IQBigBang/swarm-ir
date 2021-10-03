@@ -18,6 +18,7 @@ pub mod c_api;
 pub mod intrinsic;
 #[cfg(feature = "ir-parse")]
 pub mod irparse;
+pub mod numerics;
 
 /// Compile an IR Module to WebAssembly with the default
 /// preferred pipeline.

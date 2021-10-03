@@ -17,10 +17,10 @@ fn calc_struct_field_offset(struct_ty: Ty, field_idx: usize) -> usize {
 fn replace_2<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>>> {
     match (&i1.kind, &i2.kind) {
         // [GetFieldPtr, Read] -> [ReadAtOffset]
-        (InstrK::GetFieldPtr { struct_ty, field_idx }, InstrK::Read { ty }) => {
+        /*(InstrK::GetFieldPtr { struct_ty, field_idx }, InstrK::Read { ty }) => {
             let offset = calc_struct_field_offset(*struct_ty, *field_idx);
             Some(vec![Instr::new_intrinsic(Intrinsics::ReadAtOffset { offset, ty: *ty })])
-        },
+        },*/
         // [LoadGlobalFunc, CallIndirect] -> [CallDirect]
         (InstrK::LdGlobalFunc { func_name }, InstrK::CallIndirect) => {
             // CallIndirect has the type metadata
@@ -35,18 +35,17 @@ fn replace_2<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>
 fn replace_3<'ctx>(i1: &Instr<'ctx>, i2: &Instr<'ctx>, i3: &Instr<'ctx>) -> Option<Vec<Instr<'ctx>>> {
     match (&i1.kind, &i2.kind, &i3.kind) {
         // [GetFieldPtr, load-instr, Write] -> [load-instr, WriteAtOffset]
-        (InstrK::GetFieldPtr { struct_ty, field_idx }, _, InstrK::Write { ty }) => {
+        /*(InstrK::GetFieldPtr { struct_ty, field_idx }, _, InstrK::Write { ty }) => {
             if i2.is_load() {
                 let offset = calc_struct_field_offset(*struct_ty, *field_idx);
                 Some(vec![
                     i2.clone(),
                     Instr::new_intrinsic(Intrinsics::WriteAtOffset { offset, ty: *ty })])
             } else { None }
-        }
+        }*/
         _ => None
     }
 }
-// TODO: replace (GetFieldPtr, load-instruction, Write) with (load-instruction, WriteOffset)
 
 pub struct PeepholeOpt {}
 

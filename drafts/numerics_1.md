@@ -46,7 +46,9 @@ The rules for conversions are:
 ![](numerics_1.png)
 
 where `and(X)` means the WASM sequence `i32.const X, i32.and`
-and `shift(X)` means the WASM sequence `i32.const X, i32.shl, i32.const X, i32.shr_s`
+and `shift(X)` means the WASM sequence `i32.const X, i32.shl, i32.const X, i32.shr_s`.
+
+Notably, this means that **converting to i32/u32 is always a no-op**.
 
 ## Steps
 1. Add uint32 and other types into the Type enum

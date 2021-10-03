@@ -5,7 +5,7 @@ use crate::{intrinsic::{Intrinsic, Intrinsics}, metadata::{Key, Metadata}, ty::{
 #[derive(PartialEq, Debug, Clone)]
 pub enum InstrK<'ctx> {
     /// Load a constant integer value onto the stack
-    LdInt(i32),
+    LdInt(u32, Ty<'ctx>),
     /// Load a constant floating-point value onto the stack
     LdFloat(f32),
     /// Add two integers
@@ -41,11 +41,15 @@ pub enum InstrK<'ctx> {
     /// Compiles to the `i32.trunc_f32_s` or `i32.trunc_sat_f32_s` instruction
     /// depending on the IR Module configuration.
     /// For precise semantics, see <https://webassembly.github.io/spec/core/exec/numerics.html#op-trunc-sat-s>
-    Ftoi,
+    Ftoi { int_ty: Ty<'ctx> },
     /// Compare two signed integers. The result is an integer.
     ICmp(Cmp),
     /// Compare two floating-point values. The result is an integer.
     FCmp(Cmp),
+    /// Convert an integer to another integer type.
+    ///
+    /// For precise semantics, see the *numerics* draft, which contains a detailed description
+    IConv { target: Ty<'ctx> },
     /// Call a global function by name.
     /// Pop arguments off the stack.
     CallDirect { func_name: String },
@@ -143,7 +147,7 @@ impl<'ctx> Instr<'ctx> {
     ///
     /// Namely this includes LdInt, LdFloat, LdLocal, LdGlobalFunc
     pub fn is_load(&self) -> bool {
-        matches!(self.kind, InstrK::LdInt(_) | InstrK::LdFloat(_) | InstrK::LdLocal { idx: _ } | InstrK::LdGlobalFunc { func_name: _ })
+        matches!(self.kind, InstrK::LdInt(_, _) | InstrK::LdFloat(_) | InstrK::LdLocal { idx: _ } | InstrK::LdGlobalFunc { func_name: _ })
     }
 }
 

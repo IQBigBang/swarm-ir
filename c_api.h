@@ -52,6 +52,16 @@ void dump_module(ModuleRef module);
 
 TypeRef module_get_int32_type(ModuleRef module);
 
+TypeRef module_get_uint32_type(ModuleRef module);
+
+TypeRef module_get_int16_type(ModuleRef module);
+
+TypeRef module_get_uint16_type(ModuleRef module);
+
+TypeRef module_get_int8_type(ModuleRef module);
+
+TypeRef module_get_uint8_type(ModuleRef module);
+
 TypeRef module_get_float32_type(ModuleRef module);
 
 TypeRef module_get_ptr_type(ModuleRef module);
@@ -83,7 +93,7 @@ BlockId builder_new_block(FunctionBuilderRef builder,
 
 void builder_switch_block(FunctionBuilderRef builder, BlockId new_block);
 
-void builder_i_ld_int(FunctionBuilderRef builder, int32_t val);
+void builder_i_ld_int(FunctionBuilderRef builder, uint32_t val, TypeRef int_type);
 
 void builder_i_ld_float(FunctionBuilderRef builder, float val);
 
@@ -105,8 +115,6 @@ void builder_i_fdiv(FunctionBuilderRef builder);
 
 void builder_i_itof(FunctionBuilderRef builder);
 
-void builder_i_ftoi(FunctionBuilderRef builder);
-
 void builder_i_call_indirect(FunctionBuilderRef builder);
 
 void builder_i_end(FunctionBuilderRef builder);
@@ -118,6 +126,10 @@ void builder_i_memory_size(FunctionBuilderRef builder);
 void builder_i_discard(FunctionBuilderRef builder);
 
 void builder_i_return(FunctionBuilderRef builder);
+
+void builder_i_ftoi(FunctionBuilderRef builder, TypeRef int_type);
+
+void builder_i_iconv(FunctionBuilderRef builder, TypeRef int_type);
 
 void builder_i_icmp(FunctionBuilderRef builder, enum Cmp cmp);
 

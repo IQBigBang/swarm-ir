@@ -57,7 +57,42 @@ pub type TypeRef = *const ();
 #[no_mangle]
 pub unsafe extern "C" fn module_get_int32_type(module: ModuleRef) -> TypeRef {
     (module as *const Module).as_ref()
-        .map(|m| m.int32t().as_ref() as *const Type as *const ())
+        .map(|m| m.int32t().as_ref() as *const Type as _)
+        .unwrap_or(null())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn module_get_uint32_type(module: ModuleRef) -> TypeRef {
+    (module as *const Module).as_ref()
+        .map(|m| m.uint32t().as_ref() as *const Type as _)
+        .unwrap_or(null())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn module_get_int16_type(module: ModuleRef) -> TypeRef {
+    (module as *const Module).as_ref()
+        .map(|m| m.int16t().as_ref() as *const Type as _)
+        .unwrap_or(null())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn module_get_uint16_type(module: ModuleRef) -> TypeRef {
+    (module as *const Module).as_ref()
+        .map(|m| m.uint16t().as_ref() as *const Type as _)
+        .unwrap_or(null())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn module_get_int8_type(module: ModuleRef) -> TypeRef {
+    (module as *const Module).as_ref()
+        .map(|m| m.int8t().as_ref() as *const Type as _)
+        .unwrap_or(null())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn module_get_uint8_type(module: ModuleRef) -> TypeRef {
+    (module as *const Module).as_ref()
+        .map(|m| m.uint8t().as_ref() as *const Type as _)
         .unwrap_or(null())
 }
 
@@ -167,7 +202,10 @@ pub unsafe extern "C" fn builder_switch_block(builder: FunctionBuilderRef, new_b
 // INSTRUCTIONS
 
 #[no_mangle]
-pub unsafe extern "C" fn builder_i_ld_int(builder: FunctionBuilderRef, val: i32) { (builder as *mut FunctionBuilder).as_mut().unwrap().i_ld_int(val) }
+pub unsafe extern "C" fn builder_i_ld_int(builder: FunctionBuilderRef, val: u32, int_type: TypeRef) {
+     (builder as *mut FunctionBuilder).as_mut().unwrap()
+        .i_ld_int(val, Ty::from_raw(int_type as *const Type)) 
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn builder_i_ld_float(builder: FunctionBuilderRef, val: f32) { (builder as *mut FunctionBuilder).as_mut().unwrap().i_ld_float(val) }
@@ -193,7 +231,6 @@ argless_instr!(
     builder_i_fmul : i_fmul
     builder_i_fdiv : i_fdiv
     builder_i_itof : i_itof
-    builder_i_ftoi : i_ftoi
     builder_i_call_indirect : i_call_indirect
     builder_i_end : i_end
     builder_i_memory_grow : i_memory_grow
@@ -201,6 +238,20 @@ argless_instr!(
     builder_i_discard : i_discard
     builder_i_return : i_return
 );
+
+#[no_mangle]
+pub unsafe extern "C" fn builder_i_ftoi(builder: FunctionBuilderRef, int_type: TypeRef) {
+    (builder as *mut FunctionBuilder).as_mut().unwrap().i_ftoi(
+        Ty::from_raw(int_type as *const Type)
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn builder_i_iconv(builder: FunctionBuilderRef, int_type: TypeRef) {
+    (builder as *mut FunctionBuilder).as_mut().unwrap().i_iconv(
+        Ty::from_raw(int_type as *const Type)
+    )
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn builder_i_icmp(builder: FunctionBuilderRef, cmp: Cmp) { (builder as *mut FunctionBuilder).as_mut().unwrap().i_icmp(cmp) }

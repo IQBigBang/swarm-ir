@@ -2,7 +2,7 @@ use std::{collections::HashMap};
 
 use libintern::Interner;
 
-use crate::{instr::Function, pass::{FunctionPass, MutableFunctionPass}, ty::{Ty, Type}};
+use crate::{instr::Function, irprint::IRPrint, pass::{FunctionPass, MutableFunctionPass}, ty::{Ty, Type}};
 
 pub struct Module<'ctx> {
     // this is not true anymore:
@@ -40,8 +40,13 @@ impl Default for WasmModuleConf {
 
 struct PrimitiveTypeCache<'ctx> {
     int32: Ty<'ctx>,
+    uint32: Ty<'ctx>,
     float32: Ty<'ctx>,
-    ptr: Ty<'ctx>
+    ptr: Ty<'ctx>,
+    int16: Ty<'ctx>,
+    uint16: Ty<'ctx>,
+    int8: Ty<'ctx>,
+    uint8: Ty<'ctx>,
 }
 
 impl<'ctx> Module<'ctx> {
@@ -49,8 +54,13 @@ impl<'ctx> Module<'ctx> {
         let mut type_ctx = Interner::new();
         let cache = PrimitiveTypeCache {
             int32: type_ctx.intern(Type::Int32),
+            uint32: type_ctx.intern(Type::UInt32),
             float32: type_ctx.intern(Type::Float32),
-            ptr: type_ctx.intern(Type::Ptr)
+            ptr: type_ctx.intern(Type::Ptr),
+            int16: type_ctx.intern(Type::Int16),
+            uint16: type_ctx.intern(Type::UInt16),
+            int8: type_ctx.intern(Type::Int8),
+            uint8: type_ctx.intern(Type::UInt8),
         };
         Module {
             type_ctx/*: RefCell::new(type_ctx)*/,
@@ -107,8 +117,35 @@ impl<'ctx> Module<'ctx> {
         self.functions.get_mut(idx).unwrap()
     }
 
+    /// Print the IR of this module to stdout
+    pub fn dump_module(&self) {
+        let mut s = String::new();
+        self.ir_print(&mut s).unwrap();
+        print!("{}", s);
+    }
+
     pub fn int32t(&self) -> Ty<'ctx> {
         self.primitive_types_cache.int32
+    }
+
+    pub fn uint32t(&self) -> Ty<'ctx> {
+        self.primitive_types_cache.uint32
+    }
+
+    pub fn int16t(&self) -> Ty<'ctx> {
+        self.primitive_types_cache.int16
+    }
+
+    pub fn uint16t(&self) -> Ty<'ctx> {
+        self.primitive_types_cache.uint16
+    }
+
+    pub fn int8t(&self) -> Ty<'ctx> {
+        self.primitive_types_cache.int8
+    }
+
+    pub fn uint8t(&self) -> Ty<'ctx> {
+        self.primitive_types_cache.uint8
     }
 
     pub fn float32t(&self) -> Ty<'ctx> {
