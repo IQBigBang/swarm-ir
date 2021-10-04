@@ -1,5 +1,6 @@
 use std::{collections::HashMap};
 
+use indexmap::IndexMap;
 use libintern::Interner;
 
 use crate::{instr::Function, irprint::IRPrint, pass::{FunctionPass, MutableFunctionPass}, ty::{Ty, Type}};
@@ -9,12 +10,9 @@ pub struct Module<'ctx> {
     // The type context is ref-celled mainly for reasons of simplicity
     // to allow interning a type while e.g. modifying a function
     type_ctx: Interner<'ctx, Type<'ctx>>,
-    // The functions are in a vector to make sure they have an ordering which does not change
-    functions: Vec<Function<'ctx>>,
-    // This is for fast lookup by name
-    function_registry: HashMap<String, usize>,
-    globals: Vec<Global<'ctx>>,
-    global_registry: HashMap<String, usize>,
+    // IndexMap ensures the functions (and globals) have a constant index (ordering)
+    functions: IndexMap<String, Function<'ctx>>,
+    globals: IndexMap<String, Global<'ctx>>,
     /// We cache Ty<'ctx> of primitive types for faster access
     primitive_types_cache: PrimitiveTypeCache<'ctx>,
     /// Some configuration of the result webassembly module
@@ -64,10 +62,8 @@ impl<'ctx> Module<'ctx> {
         };
         Module {
             type_ctx/*: RefCell::new(type_ctx)*/,
-            functions: Vec::new(),
-            function_registry: HashMap::new(),
-            globals: Vec::new(),
-            global_registry: HashMap::new(),
+            functions: IndexMap::new(),
+            globals: IndexMap::new(),
             primitive_types_cache: cache,
             conf: wasm_module_conf
         }
@@ -82,27 +78,26 @@ impl<'ctx> Module<'ctx> {
     }
 
     pub fn add_function(&mut self, mut function: Function<'ctx>) {
-        // TODO: handle if a function with the same name already exists
+        if self.functions.contains_key(function.name()) {
+            panic!("Multiple functions with the same name") // TODO better handle
+        }
         
         // set the function index
         function.idx = self.functions.len();
         // clone its name
         let cloned_name = function.name().to_owned();
         // save it
-        self.functions.push(function);
-        // and save it into the map
-        self.function_registry.insert(cloned_name, self.functions.len() - 1);
+        self.functions.insert(cloned_name, function);
     }
 
     /// Return an immutable reference to a Function.
     /// Returns None if the function doesn't exist.
     pub fn get_function(&self, name: &str) -> Option<&Function<'ctx>> {
-        let idx = *self.function_registry.get(name)?;
-        Some(&self.functions[idx])
+        self.functions.get(name)
     }
 
-    pub fn functions_iter(&self) -> std::slice::Iter<'_, Function<'ctx>> {
-        self.functions.iter()
+    pub fn functions_iter(&self) -> impl Iterator<Item = &Function<'ctx>> {
+        self.functions.values()
     }
 
     pub(crate) fn function_count(&self) -> usize {
@@ -110,11 +105,11 @@ impl<'ctx> Module<'ctx> {
     }
 
     pub(crate) fn function_get_by_idx(&self, idx: usize) -> &Function<'ctx> {
-        self.functions.get(idx).unwrap()
+        self.functions.get_index(idx).unwrap().1
     }
 
     pub(crate) fn function_get_mut_by_idx(&mut self, idx: usize) -> &mut Function<'ctx> {
-        self.functions.get_mut(idx).unwrap()
+        self.functions.get_index_mut(idx).unwrap().1
     }
 
     /// Print the IR of this module to stdout
@@ -158,7 +153,7 @@ impl<'ctx> Module<'ctx> {
 
     pub fn do_pass<P: FunctionPass<'ctx>>(&self, passer: &mut P) -> Result<(), P::Error> {
         passer.visit_module(self)?;
-        for func in self.functions.iter() {
+        for func in self.functions.values() {
             passer.visit_function(self, func)?;
         }
         passer.end_module(self)?;
@@ -190,17 +185,15 @@ impl<'ctx> Module<'ctx> {
     fn new_global(&mut self, mut g: Global<'ctx>) {
         let idx = self.globals.len();
         g.idx = idx;
-        self.global_registry.insert(g.name.clone(), idx);
-        self.globals.push(g);
+        self.globals.insert(g.name.clone(), g);
     }
 
     pub fn globals_iter(&self) -> impl Iterator<Item = &Global<'ctx>> {
-        self.globals.iter()
+        self.globals.values()
     }
 
     pub fn get_global(&self, name: &str) -> Option<&Global<'ctx>> {
-        let id = *self.global_registry.get(name)?;
-        Some(&self.globals[id])
+        self.globals.get(name)
     }
 }
 

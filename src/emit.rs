@@ -320,7 +320,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
     /// the function "pointer" with value zero is not a valid one. (preserves common semantics of pointers)
     fn emit_global_function_table(&mut self, module: &Module<'ctx>) {
         let table_length: u32 =
-            TryInto::<u32>::try_into(module.functions_iter().len()).unwrap() 
+            TryInto::<u32>::try_into(module.function_count()).unwrap() 
             + 1; // +1 to account for the shift by one
         
         self.table_sec.table(wasm::TableType {
@@ -330,7 +330,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         });
 
         let functions_indexes: Vec<_> = 
-            (0u32..(module.functions_iter().len() as u32)).collect();
+            (0u32..(module.function_count() as u32)).collect();
 
         // An active element section initializes the table at start
         self.elem_sec.active(
