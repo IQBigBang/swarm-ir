@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, intrinsic::Intrinsics, module::Module, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, intrinsic::Intrinsics, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
@@ -13,6 +13,8 @@ pub struct WasmEmitter<'ctx, A: Abi> {
     the sections are saved separately and only combined into the module file at the very end */
     /// Defines mainly the function types
     type_sec: wasm::TypeSection,
+    /// Defines what external items are imported
+    import_sec: wasm::ImportSection, 
     /// Defines the functions (function prototypes)
     func_sec: wasm::FunctionSection,
     /// Defines the tables, right now there's only one table: the global function table
@@ -39,6 +41,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
             function_types: HashMap::new(),
 
             type_sec: wasm::TypeSection::new(),
+            import_sec: wasm::ImportSection::new(),
             func_sec: wasm::FunctionSection::new(),
             table_sec: wasm::TableSection::new(),
             memory_sec: wasm::MemorySection::new(),
@@ -67,15 +70,12 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
     fn compile_func(&mut self, module: &Module<'ctx>, func: &Function<'ctx>) {
         // First actually compile the function
         // the locals passed to wasm::Function are only additional locals, WITHOUT the arguments
-        let local_iter = 
-            (func.arg_count() as u32 .. func.all_local_count() as u32)
-            .zip(
+
+        let mut out_f = wasm::Function::new_with_locals_types(
                 func.all_locals_ty().iter()
                 .skip(func.arg_count())
                 .map(|t| A::compile_type(*t)));
         
-        let mut out_f = wasm::Function::new(local_iter);
-
         self.compile_block(
             module, 
             func, 
@@ -103,48 +103,48 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         emit_end: bool) {
         for instr in &block.body {
             match &instr.kind {
-                InstrK::LdInt(val, _) => { out_f.instruction(wasm::Instruction::I32Const(*val as i32)); },
-                InstrK::LdFloat(val) => { out_f.instruction(wasm::Instruction::F32Const(*val)); },
-                InstrK::FAdd => { out_f.instruction(wasm::Instruction::F32Add); },
-                InstrK::FSub => { out_f.instruction(wasm::Instruction::F32Sub); },
-                InstrK::FMul => { out_f.instruction(wasm::Instruction::F32Mul); },
-                InstrK::FDiv => { out_f.instruction(wasm::Instruction::F32Div); },
+                InstrK::LdInt(val, _) => { out_f.instruction(&wasm::Instruction::I32Const(*val as i32)); },
+                InstrK::LdFloat(val) => { out_f.instruction(&wasm::Instruction::F32Const(*val)); },
+                InstrK::FAdd => { out_f.instruction(&wasm::Instruction::F32Add); },
+                InstrK::FSub => { out_f.instruction(&wasm::Instruction::F32Sub); },
+                InstrK::FMul => { out_f.instruction(&wasm::Instruction::F32Mul); },
+                InstrK::FDiv => { out_f.instruction(&wasm::Instruction::F32Div); },
                 // these are all numerics WITH metadata
                 InstrK::IAdd | InstrK::ISub | InstrK::IMul | InstrK::IDiv |
                 InstrK::Itof | InstrK::ICmp(_) | InstrK::IConv { target: _ } => {
                     let bws = instr.meta.retrieve_copied(key!("bws")).unwrap();
                     let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
-                    for i in instrs { out_f.instruction(i); }
+                    for i in instrs { out_f.instruction(&i); }
                 },
                 InstrK::Ftoi { int_ty } => { 
                     // numeric without metadata, calculate bws from the explicit type
                     let bws = type_to_bws(*int_ty).unwrap();
                     let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
-                    for i in instrs { out_f.instruction(i); }
+                    for i in instrs { out_f.instruction(&i); }
                 },
                 InstrK::FCmp(cmp) => { match cmp {
-                    Cmp::Eq => out_f.instruction(wasm::Instruction::F32Eq),
-                    Cmp::Ne => out_f.instruction(wasm::Instruction::F32Neq),
-                    Cmp::Lt => out_f.instruction(wasm::Instruction::F32Lt),
-                    Cmp::Le => out_f.instruction(wasm::Instruction::F32Le),
-                    Cmp::Gt => out_f.instruction(wasm::Instruction::F32Gt),
-                    Cmp::Ge => out_f.instruction(wasm::Instruction::F32Ge),
+                    Cmp::Eq => out_f.instruction(&wasm::Instruction::F32Eq),
+                    Cmp::Ne => out_f.instruction(&wasm::Instruction::F32Neq),
+                    Cmp::Lt => out_f.instruction(&wasm::Instruction::F32Lt),
+                    Cmp::Le => out_f.instruction(&wasm::Instruction::F32Le),
+                    Cmp::Gt => out_f.instruction(&wasm::Instruction::F32Gt),
+                    Cmp::Ge => out_f.instruction(&wasm::Instruction::F32Ge),
                 }; }
                 InstrK::CallDirect { func_name } => {
-                    let func_idx = module.get_function(func_name).unwrap().idx;
-                    out_f.instruction(wasm::Instruction::Call(func_idx.try_into().unwrap()));
+                    let func_idx = module.get_function(func_name).unwrap().idx();
+                    out_f.instruction(&wasm::Instruction::Call(func_idx.try_into().unwrap()));
                 },
-                InstrK::LdLocal { idx } => { out_f.instruction(wasm::Instruction::LocalGet(*idx as u32)); },
-                InstrK::StLocal { idx } => { out_f.instruction(wasm::Instruction::LocalSet(*idx as u32)); },
+                InstrK::LdLocal { idx } => { out_f.instruction(&wasm::Instruction::LocalGet(*idx as u32)); },
+                InstrK::StLocal { idx } => { out_f.instruction(&wasm::Instruction::LocalSet(*idx as u32)); },
                 InstrK::LdGlobalFunc { func_name } => {
-                    let func_idx = module.get_function(func_name).unwrap().idx;
+                    let func_idx = module.get_function(func_name).unwrap().idx();
                     // the index must be shifted by one - see the description of [`emit_global_function_table`]
-                    out_f.instruction(wasm::Instruction::I32Const((func_idx + 1).try_into().unwrap()));
+                    out_f.instruction(&wasm::Instruction::I32Const((func_idx + 1).try_into().unwrap()));
                 },
                 InstrK::CallIndirect => {
                     // meta["ty"] injected by the Verifier
                     let function_ty = instr.meta.retrieve_ty(key!("ty")).unwrap();
-                    out_f.instruction(wasm::Instruction::CallIndirect {
+                    out_f.instruction(&wasm::Instruction::CallIndirect {
                         ty: self.function_types[&function_ty],
                         table: 0 // the GFT is the only one and it's at index zero
                     });
@@ -157,10 +157,10 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     match (from_wasm, to_wasm) {
                         (wasm::ValType::I32, wasm::ValType::I32) | (wasm::ValType::F32, wasm::ValType::F32) => { /* no-op */ }
                         (wasm::ValType::I32, wasm::ValType::F32) => {
-                            out_f.instruction(wasm::Instruction::F32ReinterpretI32);
+                            out_f.instruction(&wasm::Instruction::F32ReinterpretI32);
                         }
                         (wasm::ValType::F32, wasm::ValType::I32) => {
-                            out_f.instruction(wasm::Instruction::I32ReinterpretF32);
+                            out_f.instruction(&wasm::Instruction::I32ReinterpretF32);
                         }
                         /* We don't currently use other types (function "pointers" are implemented as I32) */
                         _ => unimplemented!()
@@ -178,12 +178,12 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                         } else {
                             wasm::BlockType::FunctionType(self.function_types[&block.full_type()])
                         };
-                    out_f.instruction(wasm::Instruction::If(block_type));
+                    out_f.instruction(&wasm::Instruction::If(block_type));
                     // compile the `then` block
                     // the block already ends with `end`, we don't need to add it
                     self.compile_block(module, function, block, out_f, false);
                     
-                    out_f.instruction(wasm::Instruction::Else);
+                    out_f.instruction(&wasm::Instruction::Else);
                     match r#else {
                         Some(idx) =>
                             self.compile_block(module, function, function.get_block(*idx).unwrap(), out_f, true),
@@ -209,7 +209,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
 
                     match A::compile_type(*ty) {
                         wasm::ValType::F32 => {
-                            out_f.instruction(wasm::Instruction::F32Load(mem_arg));
+                            out_f.instruction(&wasm::Instruction::F32Load(mem_arg));
                         },
                         _ => unimplemented!()
                     }
@@ -231,7 +231,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
 
                     match A::compile_type(*ty) {
                         wasm::ValType::F32 => {
-                            out_f.instruction(wasm::Instruction::F32Store(mem_arg));
+                            out_f.instruction(&wasm::Instruction::F32Store(mem_arg));
                         },
                         _ => unimplemented!()
                     }
@@ -247,24 +247,24 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     match A::type_sizeof(*ty) {
                         1 => {}, // no multiplication
                         2 => {
-                            out_f.instruction(wasm::Instruction::I32Const(1));
-                            out_f.instruction(wasm::Instruction::I32Shl);
+                            out_f.instruction(&wasm::Instruction::I32Const(1));
+                            out_f.instruction(&wasm::Instruction::I32Shl);
                         }
                         4 => {
-                            out_f.instruction(wasm::Instruction::I32Const(2));
-                            out_f.instruction(wasm::Instruction::I32Shl);
+                            out_f.instruction(&wasm::Instruction::I32Const(2));
+                            out_f.instruction(&wasm::Instruction::I32Shl);
                         }
                         8 => {
-                            out_f.instruction(wasm::Instruction::I32Const(3));
-                            out_f.instruction(wasm::Instruction::I32Shl);
+                            out_f.instruction(&wasm::Instruction::I32Const(3));
+                            out_f.instruction(&wasm::Instruction::I32Shl);
                         }
                         other => {
-                            out_f.instruction(wasm::Instruction::I32Const(other as i32));
-                            out_f.instruction(wasm::Instruction::I32Mul);
+                            out_f.instruction(&wasm::Instruction::I32Const(other as i32));
+                            out_f.instruction(&wasm::Instruction::I32Mul);
                         }
                     }
                     // finally the `IAdd`
-                    out_f.instruction(wasm::Instruction::I32Add);
+                    out_f.instruction(&wasm::Instruction::I32Add);
                 }
                 InstrK::GetFieldPtr { struct_ty, field_idx } => {
                     // The `GetFieldPtr` instruction is basically
@@ -278,24 +278,24 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     // emit the addition
                     // opt: if the field_offset is zero, we don't need to emit I32Const(0) followed by IAdd
                     if field_offset != 0 {
-                        out_f.instruction(wasm::Instruction::I32Const(field_offset as i32));
-                        out_f.instruction(wasm::Instruction::I32Add);
+                        out_f.instruction(&wasm::Instruction::I32Const(field_offset as i32));
+                        out_f.instruction(&wasm::Instruction::I32Add);
                     }
                 },
-                InstrK::Discard => { out_f.instruction(wasm::Instruction::Drop); }
+                InstrK::Discard => { out_f.instruction(&wasm::Instruction::Drop); }
                 InstrK::Return => { 
-                    out_f.instruction(wasm::Instruction::Return);
+                    out_f.instruction(&wasm::Instruction::Return);
                     // because Return is considered a block terminator in SwarmIR
                     // in wasm we need to emit `end` to terminate the block 
                     if emit_end { out_f.instruction(wasm::Instruction::End); }
                 }
-                InstrK::MemorySize => { out_f.instruction(wasm::Instruction::MemorySize(0)); }
-                InstrK::MemoryGrow => { out_f.instruction(wasm::Instruction::MemoryGrow(0)); }
+                InstrK::MemorySize => { out_f.instruction(&wasm::Instruction::MemorySize(0)); }
+                InstrK::MemoryGrow => { out_f.instruction(&wasm::Instruction::MemoryGrow(0)); }
                 InstrK::LdGlobal(name) => {
-                    out_f.instruction(wasm::Instruction::GlobalGet(module.get_global(name).unwrap().idx as u32));
+                    out_f.instruction(&wasm::Instruction::GlobalGet(module.get_global(name).unwrap().idx() as u32));
                 }
                 InstrK::StGlobal(name) => {
-                    out_f.instruction(wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx as u32));
+                    out_f.instruction(&wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx() as u32));
                 }
                 InstrK::Intrinsic(i) => {
                     // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types
@@ -335,7 +335,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         // An active element section initializes the table at start
         self.elem_sec.active(
             Some(0), 
-            wasm::Instruction::I32Const(1), // skip the first element 
+            &wasm::Instruction::I32Const(1), // skip the first element 
             wasm::ValType::FuncRef, 
             wasm::Elements::Functions(&functions_indexes));
     }
@@ -352,7 +352,25 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 wasm::GlobalType {
                     val_type: A::compile_type(glob.ty),
                     mutable: true // TODO immutable globals
-                }, init_expr);
+                }, &init_expr);
+        }
+    }
+
+    /// Emit `extern` definitions = imports in WASM
+    fn emit_externs(&mut self, module: &Module<'ctx>) {
+        for f in module.functions_iter() {
+            let f = match f {
+                FuncDef::Extern(x) => x,
+                _ => break
+            };
+            
+            // TODO: configure custom import module name
+            // we default to `env` because that's what LLVM (= C++ and Rust) do
+            self.import_sec.import(
+                "env", 
+                Some(f.name()), 
+                wasm::EntityType::Function(self.function_types[&f.ty()])
+            );
         }
     }
 
@@ -360,6 +378,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         // Emit the sections in correct order
         self.module
             .section(&self.type_sec)
+            .section(&self.import_sec)
             .section(&self.func_sec)
             .section(&self.table_sec)
             .section(&self.memory_sec)
@@ -380,6 +399,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> FunctionPass<'ctx> for WasmEmitt
         self.encode_types(module);
         // emit globals' definitions
         self.emit_globals(module);
+        // emit external (i.e. imported) definitions
+        self.emit_externs(module);
         Ok(())
     }
 

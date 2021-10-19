@@ -1,4 +1,4 @@
-use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::{Global, Module}, numerics::BitWidthSign, ty::{Ty, Type}};
+use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, module::{ExternFunction, FuncDef, Functional, Global, Module}, numerics::BitWidthSign, ty::{Ty, Type}};
 
 pub trait IRPrint {
     fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result;
@@ -247,6 +247,24 @@ impl IRPrint for BitWidthSign {
             BitWidthSign::U16 => write!(w, "u16"),
             BitWidthSign::S8 => write!(w, "s8"),
             BitWidthSign::U8 => write!(w, "u8"),
+        }
+    }
+}
+
+impl<'ctx> IRPrint for ExternFunction<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        write!(w, "extern func \"{}\" ", self.name())?;
+        self.ty().ir_print(w)?;
+        writeln!(w, ";")?;
+        writeln!(w)
+    }
+}
+
+impl<'ctx> IRPrint for FuncDef<'ctx> {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        match self {
+            FuncDef::Local(f) => f.ir_print(w),
+            FuncDef::Extern(f) => f.ir_print(w), 
         }
     }
 }

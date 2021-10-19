@@ -1,5 +1,3 @@
-use std::{collections::HashMap};
-
 use indexmap::IndexMap;
 use libintern::Interner;
 
@@ -11,7 +9,7 @@ pub struct Module<'ctx> {
     // to allow interning a type while e.g. modifying a function
     type_ctx: Interner<'ctx, Type<'ctx>>,
     // IndexMap ensures the functions (and globals) have a constant index (ordering)
-    functions: IndexMap<String, Function<'ctx>>,
+    functions: IndexMap<String, FuncDef<'ctx>>,
     globals: IndexMap<String, Global<'ctx>>,
     /// We cache Ty<'ctx> of primitive types for faster access
     primitive_types_cache: PrimitiveTypeCache<'ctx>,
@@ -87,16 +85,16 @@ impl<'ctx> Module<'ctx> {
         // clone its name
         let cloned_name = function.name().to_owned();
         // save it
-        self.functions.insert(cloned_name, function);
+        self.functions.insert(cloned_name, FuncDef::Local(function));
     }
 
     /// Return an immutable reference to a Function.
     /// Returns None if the function doesn't exist.
-    pub fn get_function(&self, name: &str) -> Option<&Function<'ctx>> {
+    pub fn get_function(&self, name: &str) -> Option<&FuncDef<'ctx>> {
         self.functions.get(name)
     }
 
-    pub fn functions_iter(&self) -> impl Iterator<Item = &Function<'ctx>> {
+    pub fn functions_iter(&self) -> impl Iterator<Item = &FuncDef<'ctx>> {
         self.functions.values()
     }
 
@@ -104,11 +102,11 @@ impl<'ctx> Module<'ctx> {
         self.functions.len()
     }
 
-    pub(crate) fn function_get_by_idx(&self, idx: usize) -> &Function<'ctx> {
+    pub(crate) fn function_get_by_idx(&self, idx: usize) -> &FuncDef<'ctx> {
         self.functions.get_index(idx).unwrap().1
     }
 
-    pub(crate) fn function_get_mut_by_idx(&mut self, idx: usize) -> &mut Function<'ctx> {
+    pub(crate) fn function_get_mut_by_idx(&mut self, idx: usize) -> &mut FuncDef<'ctx> {
         self.functions.get_index_mut(idx).unwrap().1
     }
 
@@ -153,8 +151,10 @@ impl<'ctx> Module<'ctx> {
 
     pub fn do_pass<P: FunctionPass<'ctx>>(&self, passer: &mut P) -> Result<(), P::Error> {
         passer.visit_module(self)?;
-        for func in self.functions.values() {
-            passer.visit_function(self, func)?;
+        for func_def in self.functions.values() {
+            if let FuncDef::Local(func) = func_def {
+                passer.visit_function(self, func)?;
+            }
         }
         passer.end_module(self)?;
         Ok(())
@@ -163,8 +163,10 @@ impl<'ctx> Module<'ctx> {
     pub fn do_mut_pass<P: MutableFunctionPass<'ctx>>(&mut self, passer: &mut P) -> Result<(), P::Error> {
         passer.visit_module(self)?;
         for i in 0..self.functions.len() {
-            let info = passer.visit_function(self, &self.functions[i])?;
-            passer.mutate_function(&mut self.functions[i], info)?;
+            if self.functions[i].is_local() {
+                let info = passer.visit_function(self, self.functions[i].unwrap_local())?;
+                passer.mutate_function(self.functions[i].unwrap_local_mut(), info)?;
+            }
         }
         Ok(())
     }
@@ -195,6 +197,26 @@ impl<'ctx> Module<'ctx> {
     pub fn get_global(&self, name: &str) -> Option<&Global<'ctx>> {
         self.globals.get(name)
     }
+
+    /// Add a new external function definition.
+    /// 
+    /// **All external functions must be defined before ANY local functions**.
+    /// This ensures correct indexing during WASM compilation.
+    pub fn add_extern_function(&mut self, mut function: ExternFunction<'ctx>) {
+        if self.functions.contains_key(function.name()) {
+            panic!("Multiple functions with the same name") // TODO better handle
+        }
+        if self.functions.values().any(|def| def.is_local()) {
+            panic!("All extern functions must be defined before any local functions")
+        }
+        
+        // set the function index
+        function.idx = self.functions.len();
+        // clone its name
+        let cloned_name = function.name().to_owned();
+        // save it
+        self.functions.insert(cloned_name, FuncDef::Extern(function));
+    }
 }
 
 pub struct Global<'ctx> {
@@ -203,7 +225,7 @@ pub struct Global<'ctx> {
     value: GlobalValueInit,
     /// The Global's index (equivalent to how functions have indexes)
     /// assigned by the module
-    pub(crate) idx: usize
+    idx: usize
 }
 
 impl<'ctx> Global<'ctx> {
@@ -228,10 +250,127 @@ impl<'ctx> Global<'ctx> {
             _ => panic!()
         }
     }
+
+    pub(crate) fn idx(&self) -> usize { self.idx }
 }
 
 enum GlobalValueInit {
     ConstInt(i32),
     ConstFloat(f32),
     // TODO: ConstFunc (and other types)
+}
+
+pub struct ExternFunction<'ctx> {
+    name: String,
+    ty: Ty<'ctx>,
+    idx: usize,
+}
+
+impl<'ctx> ExternFunction<'ctx> {
+    pub fn new(name: String, ty: Ty<'ctx>) -> Self {
+        assert!(ty.is_func(), "The type of a Function must be a function type");
+
+        ExternFunction { name, ty, idx: usize::MAX }
+    }
+
+    pub fn ret_tys(&self) -> &Vec<Ty<'ctx>> {
+        match &*self.ty {
+            Type::Func { args: _, ret } => ret,
+            _ => unreachable!()
+        }
+    }
+
+    pub fn arg_tys(&self) -> &Vec<Ty<'ctx>> {
+        match &*self.ty {
+            Type::Func { args, ret: _ } => args,
+            _ => unreachable!()
+        } 
+    }
+}
+
+pub enum FuncDef<'ctx> {
+    Local(Function<'ctx>),
+    Extern(ExternFunction<'ctx>)
+}
+
+impl<'ctx> FuncDef<'ctx> {
+    pub fn is_local(&self) -> bool { matches!(self, FuncDef::Local(_)) }
+    pub fn is_extern(&self) -> bool { matches!(self, FuncDef::Extern(_)) }
+    pub fn unwrap_local(&self) -> &Function<'ctx> { 
+        match self {
+            FuncDef::Local(f) => f,
+            FuncDef::Extern(_) => panic!(),
+        } 
+    }
+    pub fn unwrap_local_mut(&mut self) -> &mut Function<'ctx> { 
+        match self {
+            FuncDef::Local(f) => f,
+            FuncDef::Extern(_) => panic!(),
+        } 
+    }
+}
+
+/// A trait implemented for both [`Function`] and [`ExternFunction`]
+pub trait Functional<'ctx> : IRPrint + 'ctx {
+    /// Return the name of the function
+    fn name(&self) -> &str;
+    /// Return the type of the function
+    fn ty(&self) -> Ty<'ctx>;
+    /// Return the index of the function
+    fn idx(&self) -> usize;
+    fn arg_tys(&self) -> &Vec<Ty<'ctx>>;
+    fn ret_tys(&self) -> &Vec<Ty<'ctx>>;
+}
+
+impl<'ctx> Functional<'ctx> for Function<'ctx> {
+    fn name(&self) -> &str { self.name() }
+    fn ty(&self) -> Ty<'ctx> { self.ty() }
+    fn idx(&self) -> usize { self.idx }
+    fn arg_tys(&self) -> &Vec<Ty<'ctx>> { self.arg_tys() }
+    fn ret_tys(&self) -> &Vec<Ty<'ctx>> { self.ret_tys() }
+}
+
+impl<'ctx> Functional<'ctx> for ExternFunction<'ctx> {
+    fn name(&self) -> &str { &self.name }
+    fn ty(&self) -> Ty<'ctx> { self.ty }
+    fn idx(&self) -> usize { self.idx }
+    fn arg_tys(&self) -> &Vec<Ty<'ctx>> { self.arg_tys() }
+    fn ret_tys(&self) -> &Vec<Ty<'ctx>> { self.ret_tys() }
+}
+
+impl<'ctx> Functional<'ctx> for FuncDef<'ctx> {
+    fn name(&self) -> &str { 
+        match &self {
+            FuncDef::Local(f) => f.name(),
+            FuncDef::Extern(f) => f.name(),
+        }
+    }
+
+    fn ty(&self) -> Ty<'ctx> {
+        match &self {
+            FuncDef::Local(f) => f.ty(),
+            FuncDef::Extern(f) => f.ty(),
+        }
+    }
+
+    fn idx(&self) -> usize {
+        match &self {
+            FuncDef::Local(f) => f.idx(),
+            FuncDef::Extern(f) => f.idx(),
+        }
+    }
+
+    fn arg_tys(&self) -> &Vec<Ty<'ctx>> {
+        match &self {
+            FuncDef::Local(f) => f.arg_tys(),
+            FuncDef::Extern(f) => f.arg_tys(),
+        }
+    }
+
+    fn ret_tys(&self) -> &Vec<Ty<'ctx>> {
+        match &self {
+            FuncDef::Local(f) => f.ret_tys(),
+            FuncDef::Extern(f) => f.ret_tys(),
+        }
+    }
 }

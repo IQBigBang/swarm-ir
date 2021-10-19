@@ -78,6 +78,10 @@ void module_new_int_global(ModuleRef module, const int8_t *global_name, int32_t 
 
 void module_new_float_global(ModuleRef module, const int8_t *global_name, float value);
 
+void module_new_extern_function(ModuleRef module,
+                                const int8_t *function_name,
+                                TypeRef function_type);
+
 FunctionBuilderRef create_function_builder(const int8_t *function_name, TypeRef function_type);
 
 void finish_function_builder(ModuleRef module, FunctionBuilderRef builder);
@@ -92,6 +96,8 @@ BlockId builder_new_block(FunctionBuilderRef builder,
                           enum BlockTag block_tag);
 
 void builder_switch_block(FunctionBuilderRef builder, BlockId new_block);
+
+BlockId builder_get_current_block(FunctionBuilderRef builder);
 
 void builder_i_ld_int(FunctionBuilderRef builder, uint32_t val, TypeRef int_type);
 

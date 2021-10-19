@@ -37,10 +37,11 @@ pub fn pipeline_compile_module_to_wasm(mut module: module::Module<'_>, opt: bool
     #[cfg(feature = "opt")]
     if opt {
         for i in 0..module.function_count() {
-            let result = passes::PeepholeOpt{}.visit_function(&module, module.function_get_by_idx(i)).unwrap();
+            if module.function_get_by_idx(i).is_extern() { continue }
+            let result = passes::PeepholeOpt{}.visit_function(&module, module.function_get_by_idx(i).unwrap_local()).unwrap();
             let mut rewrite_pass = passes::InstrRewritePass::new(i, result).unwrap();
-            rewrite_pass.visit_function(&module, module.function_get_by_idx(i)).unwrap();
-            rewrite_pass.mutate_function(module.function_get_mut_by_idx(i), ()).unwrap();
+            rewrite_pass.visit_function(&module, module.function_get_by_idx(i).unwrap_local()).unwrap();
+            rewrite_pass.mutate_function(module.function_get_mut_by_idx(i).unwrap_local_mut(), ()).unwrap();
         }
     }
 

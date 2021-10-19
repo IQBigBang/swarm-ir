@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, Instr, InstrBlock, InstrK}, numerics::{BitWidthSign, do_int_types_match, type_to_bws}, pass::{MutableFunctionPass}, ty::{Ty, Type}};
+use crate::{instr::{BlockId, Instr, InstrBlock, InstrK}, module::Functional, numerics::{BitWidthSign, do_int_types_match, type_to_bws}, pass::MutableFunctionPass, ty::{Ty, Type}};
 
 pub struct Verifier {}
 

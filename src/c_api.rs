@@ -3,7 +3,7 @@
 
 use std::{ffi::CStr, panic::catch_unwind, ptr::null};
 
-use crate::{builder::{self, FunctionBuilder, InstrBuilder}, instr::{self, BlockTag, Cmp}, irprint::IRPrint, module::{Module, WasmModuleConf}, ty::{Ty, Type}};
+use crate::{builder::{self, FunctionBuilder, InstrBuilder}, instr::{self, BlockTag, Cmp}, irprint::IRPrint, module::{ExternFunction, Module, WasmModuleConf}, ty::{Ty, Type}};
 
 #[inline]
 fn c_alloc<T>(x: T) -> *mut () { Box::leak(Box::new(x)) as *mut T as *mut () }
@@ -150,6 +150,19 @@ pub unsafe extern "C" fn module_new_float_global(module: ModuleRef, global_name:
         .new_float_global(string_of(global_name), value);
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn module_new_extern_function(
+    module: ModuleRef, 
+    function_name: *const i8, 
+    function_type: TypeRef) {
+
+    let func_name = string_of(function_name);
+    let func_ty = Ty::from_raw(function_type as *const () as *const Type);
+    (module as *mut Module).as_mut().unwrap().add_extern_function(ExternFunction::new(
+        func_name, func_ty
+    ))
+}
+
 pub type FunctionBuilderRef = *mut ();
 
 #[no_mangle]
@@ -197,6 +210,11 @@ pub unsafe extern "C" fn builder_new_block(builder: FunctionBuilderRef, block_re
 #[no_mangle]
 pub unsafe extern "C" fn builder_switch_block(builder: FunctionBuilderRef, new_block: BlockId) {
     (builder as *mut FunctionBuilder).as_mut().unwrap().switch_block(new_block)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn builder_get_current_block(builder: FunctionBuilderRef) -> BlockId {
+    (builder as *mut FunctionBuilder).as_mut().unwrap().get_current_block()
 }
 
 // INSTRUCTIONS
