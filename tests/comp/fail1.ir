@@ -1,0 +1,8 @@
+func "f" () -> () {
+locals:
+    #0  int32
+b0: () -> () tag=main
+    ld.loc #0
+    fail
+    ld.loc #1
+}

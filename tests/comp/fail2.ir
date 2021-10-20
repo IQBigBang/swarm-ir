@@ -1,0 +1,5 @@
+func "f" () -> int32 {
+locals:
+b0: () -> int32 tag=main
+    fail
+}
