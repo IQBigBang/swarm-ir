@@ -250,7 +250,6 @@ argless_instr!(
     builder_i_fdiv : i_fdiv
     builder_i_itof : i_itof
     builder_i_call_indirect : i_call_indirect
-    builder_i_end : i_end
     builder_i_memory_grow : i_memory_grow
     builder_i_memory_size : i_memory_size
     builder_i_discard : i_discard

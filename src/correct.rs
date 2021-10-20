@@ -1,4 +1,4 @@
-use crate::{instr::{Instr, InstrK}, pass::MutableFunctionPass};
+use crate::{instr::{InstrK}, pass::MutableFunctionPass};
 
 /// A simple correction pass.
 ///
@@ -27,16 +27,6 @@ impl<'ctx> MutableFunctionPass<'ctx> for CorrectionPass {
         &mut self,
         function: &mut crate::instr::Function<'ctx>,
         info: Self::MutationInfo) -> Result<(), Self::Error> {
-        
-        for block in function.blocks_iter_mut() {
-            if block.body.last().map(|i| i.kind == InstrK::End || i.kind == InstrK::Return).unwrap_or(false) {
-                /* The block ends with End or Return, 
-                Everything's OK */
-            }
-            else {
-                block.add(InstrK::End)
-            } 
-        }
 
         Ok(())
     }

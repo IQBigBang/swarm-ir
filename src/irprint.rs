@@ -108,7 +108,6 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             InstrK::StLocal { idx } => write!(w, "st.loc #{}", idx),
             InstrK::LdGlobalFunc { func_name } => write!(w, "ld_glob_func \"{}\"", func_name),
             InstrK::CallIndirect => write!(w, "call indirect"),
-            InstrK::End => write!(w, "end"),
             InstrK::Bitcast { target } => {
                 write!(w, "bitcast to ")?;
                 target.ir_print(w)

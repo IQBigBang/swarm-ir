@@ -92,7 +92,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for InstrRewritePass<'ctx> {
             // and don't have to do any index calculations, because we always modify
             // at the end and don't affect later ranges
             for (range, new_instrs) in modifications {
-                if range.end >= block.body.len() { panic!() } // TODO
+                if range.end > block.body.len() { panic!() } // TODO
 
                 // The `splice` operator does exactly what we need:
                 // remove the range and replace it with new items
@@ -111,7 +111,7 @@ impl<'ctx> MutableFunctionPass<'ctx> for InstrRewritePass<'ctx> {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{builder::{FunctionBuilder, InstrBuilder}, instr::{Instr, InstrK}, module::{Module, WasmModuleConf}};
+    use crate::{builder::{FunctionBuilder, InstrBuilder}, instr::{Instr, InstrK}, module::{Functional, Module, WasmModuleConf}};
 
     use super::InstrRewritePass;
 
@@ -128,14 +128,13 @@ mod tests {
         builder.i_ld_local(arg0);
         builder.i_ld_int(1, top.int32t());
         builder.i_iadd();
-        builder.i_end();
 
         builder.finish(&mut top);
 
-        // Now the function is: LdLocal 0, LdInt 1, IAdd, End
+        // Now the function is: LdLocal 0, LdInt 1, IAdd
 
         let mut rewrite_pass = InstrRewritePass::new(
-            top.get_function("func").unwrap().idx,
+            top.get_function("func").unwrap().idx(),
             {
                 let mut m = HashMap::new();
                 m.insert(0.into(), vec![
@@ -144,7 +143,7 @@ mod tests {
                         Instr::new(InstrK::LdInt(3, top.int32t())),
                         Instr::new(InstrK::LdLocal { idx: 0 })
                     ]),
-                    // insert LdInt 4, LdSub before the End instr
+                    // insert LdInt 4, LdSub after the IAdd instruction
                     (3..3, vec![
                         Instr::new(InstrK::LdInt(4, top.int32t())),
                         Instr::new(InstrK::ISub)
@@ -156,14 +155,13 @@ mod tests {
         
         top.do_mut_pass(&mut rewrite_pass).unwrap();
 
-        let instr_kinds: Vec<InstrK<'_>> = top.get_function("func").unwrap().entry_block().body.iter().map(|i| i.kind.clone()).collect();
+        let instr_kinds: Vec<InstrK<'_>> = top.get_function("func").unwrap().unwrap_local().entry_block().body.iter().map(|i| i.kind.clone()).collect();
         assert_eq!(instr_kinds, vec![
             InstrK::LdInt(3, top.int32t()),
             InstrK::LdLocal { idx: 0 },
             InstrK::IAdd,
             InstrK::LdInt(4, top.int32t()),
             InstrK::ISub,
-            InstrK::End
         ]);
     }
 }

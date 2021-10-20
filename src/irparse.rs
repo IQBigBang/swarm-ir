@@ -205,7 +205,6 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
                 let func_name = self.expect(IrToken::String)?.strip('"').to_owned();
                 Instr::new(InstrK::LdGlobalFunc { func_name })
             },
-            "end" => Instr::new(InstrK::End),
             "bitcast" => {
                 let t = self.expect(IrToken::Identifier)?;
                 if t != "to" { return Err(IrParseError::MalformedIdentifier { got: t.to_owned() }) }

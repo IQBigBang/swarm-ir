@@ -62,12 +62,6 @@ pub enum InstrK<'ctx> {
     /// Call a function pointer on top of the stack.
     /// Pop arguments off the stack.
     CallIndirect,
-    /// Signifies the end of a block, __every block must end with either this instruction or Return__.
-    ///
-    /// At the end of a block, execution either:
-    /// * returns to the caller if this block is the main block of a function
-    /// * returns to the parent block
-    End,
     /// Cast a value to another type without any value conversions.
     /// equivalent to `*((T*)&expr)` in C.
     ///
@@ -187,6 +181,16 @@ pub enum BlockTag {
     Loop,
 }
 
+/// A block is a series of instructions
+/// which are guaranteed to be executed in order they're defined,
+/// i.e. for a block consisting of instructions `A, B, C`, `C` is
+/// guaranteed to be executed before `B` and `B` is guaranteed to be executed before `A`.
+/// 
+/// At the end of a block's execution, the behavior depends on the tag:
+/// * If tag = *main*, then the function returns
+/// * If tag = *ifelse*, then the execution jumps to the instruction one after the corresponding `if_else` instruction
+/// * If tag = *loop*, then the execution jumps to the start of the loop block
+/// Otherwise, the behavior is not specified.
 pub struct InstrBlock<'ctx> {
     /// A unique index of the block inside a function.
     /// It's assigned by the builder and shouldn't be touched by the user

@@ -262,11 +262,6 @@ impl<'ctx> Verifier {
                     }
                     out_info.bitcast_source_types.insert((this_block_id, i), val);
                 }
-                InstrK::End => {
-                    if i != block.body.len() - 1 {
-                        return Err(VerifyError::UnexpectedEndOfBlock)
-                    }
-                }
                 InstrK::IfElse { then, r#else } => {
                     // the condition
                     let cond = stack.pop().ok_or(VerifyError::StackUnderflow)?;
@@ -453,12 +448,6 @@ impl<'ctx> Verifier {
             }
         }
 
-        // also make sure the block ends with an End or Return instruction
-        match block.body.last() {
-            Some(Instr { meta: _, kind: InstrK::End | InstrK::Return }) => {},
-            _ => return Err(VerifyError::UnexpectedEndOfBlock)
-        }
-
         // at the end of the block, check if the types left on the stack
         // agree with the block's type
         if !stack.iter()
@@ -577,7 +566,6 @@ pub enum VerifyError<'ctx> {
     GeneralError,
     StackUnderflow,
     InvalidType { expected: Ty<'ctx>, actual: Ty<'ctx>, reason: &'static str },
-    UnexpectedEndOfBlock,
     UndefinedFunctionCall { func_name: String },
     OutOfBoundsLocalIndex,
     InvalidTypeCallIndirect,

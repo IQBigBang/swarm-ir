@@ -1,5 +1,4 @@
 func "f" () -> () {
 locals:
 b0: () -> () tag=main
-    end
 }

@@ -72,16 +72,16 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         // the locals passed to wasm::Function are only additional locals, WITHOUT the arguments
 
         let mut out_f = wasm::Function::new_with_locals_types(
-                func.all_locals_ty().iter()
+            func.all_locals_ty().iter()
                 .skip(func.arg_count())
                 .map(|t| A::compile_type(*t)));
-        
+
         self.compile_block(
             module, 
             func, 
             func.entry_block(), 
-            &mut out_f,
-        true);
+            &mut out_f);
+        out_f.instruction(&wasm::Instruction::End);
 
         // Then add to the sections
         // first the function section
@@ -98,9 +98,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         module: &Module<'ctx>, 
         function: &Function<'ctx>, 
         block: &InstrBlock<'ctx>, 
-        out_f: &mut wasm::Function,
-        // Some control flow constructs require the `end` to be emitted manually and/or in a different place
-        emit_end: bool) {
+        out_f: &mut wasm::Function) {
         for instr in &block.body {
             match &instr.kind {
                 InstrK::LdInt(val, _) => { out_f.instruction(&wasm::Instruction::I32Const(*val as i32)); },
@@ -166,7 +164,6 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                         _ => unimplemented!()
                     }
                 }
-                InstrK::End => { if emit_end { out_f.instruction(wasm::Instruction::End); } },
                 InstrK::IfElse { then, r#else } => {
                     let block = function.get_block(*then).unwrap();
                     let block_type = 
@@ -180,24 +177,23 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                         };
                     out_f.instruction(&wasm::Instruction::If(block_type));
                     // compile the `then` block
-                    // the block already ends with `end`, we don't need to add it
-                    self.compile_block(module, function, block, out_f, false);
+                    // according to wasm spec, it doesn't need the end instruction
+                    self.compile_block(module, function, block, out_f);
                     
                     out_f.instruction(&wasm::Instruction::Else);
                     match r#else {
                         Some(idx) =>
-                            self.compile_block(module, function, function.get_block(*idx).unwrap(), out_f, true),
-                        None => {
-                            out_f.instruction(wasm::Instruction::End);
-                        }
+                            self.compile_block(module, function, function.get_block(*idx).unwrap(), out_f),
+                        None => {}
                     }
+                    out_f.instruction(&wasm::Instruction::End);
                 }
                 InstrK::Read { ty } => {
                     if ty.is_int() {
                         // use the "numeric" module functions for compilation
                         let bws = type_to_bws(*ty).unwrap();
                         let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
-                        for i in instrs { out_f.instruction(i); }
+                        for i in instrs { out_f.instruction(&i); }
                         continue
                     }
 
@@ -219,7 +215,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                         // use the "numeric" module functions for compilation
                         let bws = type_to_bws(*ty).unwrap();
                         let instrs = emit_numeric_instr::<A>(&instr.kind, bws, module.conf.use_saturating_ftoi);
-                        for i in instrs { out_f.instruction(i); }
+                        for i in instrs { out_f.instruction(&i); }
                         continue
                     }
 
@@ -285,9 +281,6 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::Discard => { out_f.instruction(&wasm::Instruction::Drop); }
                 InstrK::Return => { 
                     out_f.instruction(&wasm::Instruction::Return);
-                    // because Return is considered a block terminator in SwarmIR
-                    // in wasm we need to emit `end` to terminate the block 
-                    if emit_end { out_f.instruction(wasm::Instruction::End); }
                 }
                 InstrK::MemorySize => { out_f.instruction(&wasm::Instruction::MemorySize(0)); }
                 InstrK::MemoryGrow => { out_f.instruction(&wasm::Instruction::MemoryGrow(0)); }

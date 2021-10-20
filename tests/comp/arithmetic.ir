@@ -6,5 +6,4 @@ b0: () -> int32 tag=main
     ld.loc #0
     ld.loc #1
     iadd
-    end
 }

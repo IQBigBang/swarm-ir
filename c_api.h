@@ -123,8 +123,6 @@ void builder_i_itof(FunctionBuilderRef builder);
 
 void builder_i_call_indirect(FunctionBuilderRef builder);
 
-void builder_i_end(FunctionBuilderRef builder);
-
 void builder_i_memory_grow(FunctionBuilderRef builder);
 
 void builder_i_memory_size(FunctionBuilderRef builder);

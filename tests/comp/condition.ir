@@ -9,11 +9,9 @@ b0: () -> int32 tag=main
 
 b1: () -> int32 tag=if_else
     ld.int32 42
-    end
 
 b2: () -> int32 tag=if_else
     ld.loc #0
     ld.int32 3
     imul
-    end
 }
