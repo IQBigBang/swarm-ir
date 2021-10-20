@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, Instr, InstrBlock, InstrK}, module::Functional, numerics::{BitWidthSign, do_int_types_match, type_to_bws}, pass::MutableFunctionPass, ty::{Ty, Type}};
+use crate::{instr::{BlockId, InstrBlock, InstrK}, module::Functional, numerics::{BitWidthSign, do_int_types_match, type_to_bws}, pass::MutableFunctionPass, ty::{Ty, Type}};
 
 pub struct Verifier {}
 
@@ -345,7 +345,7 @@ impl<'ctx> Verifier {
                         })
                     }
                 }
-                InstrK::Offset { ty } => {
+                InstrK::Offset { ty: _ } => {
                     // Offset requires an integer and a pointer, pushes a pointer
                     let num = stack.pop().ok_or(VerifyError::StackUnderflow)?;
                     if !num.is_int() {

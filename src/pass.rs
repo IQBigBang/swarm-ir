@@ -5,7 +5,7 @@ pub trait FunctionPass<'ctx> {
     type Output;
 
     /// Start visiting the module. Called before any [`Self::visit_function`].
-    fn visit_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
+    fn visit_module(&mut self, _module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
 
     /// Visit a function in a module.
     fn visit_function(
@@ -14,7 +14,7 @@ pub trait FunctionPass<'ctx> {
         function: &Function<'ctx>) -> Result<Self::Output, Self::Error>;
     
     /// Invoked at the end of the module after all functions.
-    fn end_module(&mut self, module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
+    fn end_module(&mut self, _module: &Module<'ctx>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 /// A pass which is meant to mutate (i.e. change) the function

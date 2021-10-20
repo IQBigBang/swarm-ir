@@ -144,10 +144,6 @@ impl<'ctx, K: MetadataKey> Metadata<'ctx, K> {
         })
     }
 
-    pub(crate) fn retrieve_cloned<T: Any + Clone>(&self, name: K) -> Option<T> {
-        self.retrieve(name).cloned()
-    }
-
     pub(crate) fn retrieve_copied<T: Any + Copy>(&self, name: K) -> Option<T> {
         self.retrieve(name).copied()
     }
@@ -219,7 +215,7 @@ mod tests {
         assert_eq!(meta.retrieve::<usize>("x"), Some(&12));
 
         meta.insert("greeting", String::from("Hello, world!"));
-        assert_eq!(meta.retrieve_cloned::<String>("greeting").unwrap(), Some("Hello, world!").unwrap());
+        assert_eq!(meta.retrieve::<String>("greeting").cloned().unwrap(), Some("Hello, world!").unwrap());
 
         assert_eq!(meta.retrieve::<usize>("y"), None);
     }

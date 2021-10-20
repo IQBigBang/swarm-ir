@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{abi::{Abi, Wasm32Abi}, instr::{BlockId, Instr, InstrK}, intrinsic::Intrinsics, pass::{FunctionPass}, ty::{Ty, Type}};
+use crate::{abi::{Abi, Wasm32Abi}, instr::{BlockId, Instr, InstrK}, pass::{FunctionPass}, ty::{Ty, Type}};
 
 use super::BlobRewriteData;
 
@@ -56,7 +56,7 @@ impl<'ctx> FunctionPass<'ctx> for PeepholeOpt {
 
     fn visit_function(
         &mut self, 
-        module: &crate::module::Module<'ctx>,
+        _module: &crate::module::Module<'ctx>,
         function: &crate::instr::Function<'ctx>) -> Result<Self::Output, Self::Error> {
         
         let mut rewrite_data = HashMap::new();

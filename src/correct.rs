@@ -1,4 +1,4 @@
-use crate::{instr::{InstrK}, pass::MutableFunctionPass};
+use crate::{pass::MutableFunctionPass};
 
 /// A simple correction pass.
 ///
@@ -6,7 +6,7 @@ use crate::{instr::{InstrK}, pass::MutableFunctionPass};
 /// or which don't have any other alternative.
 ///
 /// Specifically, this means:
-/// * adding the `end` instruction at the end of a block if there isn't one
+// TODO: unreachability (?), maybe some other things
 pub struct CorrectionPass {}
 
 impl<'ctx> MutableFunctionPass<'ctx> for CorrectionPass {
@@ -16,8 +16,8 @@ impl<'ctx> MutableFunctionPass<'ctx> for CorrectionPass {
 
     fn visit_function(
         &mut self, 
-        module: &crate::module::Module<'ctx>,
-        function: &crate::instr::Function<'ctx>) -> Result<Self::MutationInfo, Self::Error> {
+        _module: &crate::module::Module<'ctx>,
+        _function: &crate::instr::Function<'ctx>) -> Result<Self::MutationInfo, Self::Error> {
 
         /* No analysis of the whole module is required yet */
         Ok(CorrectionPassMutationInfo {})
@@ -25,8 +25,8 @@ impl<'ctx> MutableFunctionPass<'ctx> for CorrectionPass {
 
     fn mutate_function(
         &mut self,
-        function: &mut crate::instr::Function<'ctx>,
-        info: Self::MutationInfo) -> Result<(), Self::Error> {
+        _function: &mut crate::instr::Function<'ctx>,
+        _info: Self::MutationInfo) -> Result<(), Self::Error> {
 
         Ok(())
     }

@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, intrinsic::Intrinsics, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
@@ -290,7 +290,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::StGlobal(name) => {
                     out_f.instruction(&wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx() as u32));
                 }
-                InstrK::Intrinsic(i) => {
+                InstrK::Intrinsic(_i) => {
                     // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types
                     unimplemented!()
                 }
