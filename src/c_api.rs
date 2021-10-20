@@ -254,6 +254,7 @@ argless_instr!(
     builder_i_memory_size : i_memory_size
     builder_i_discard : i_discard
     builder_i_return : i_return
+    builder_i_fail : i_fail
 );
 
 #[no_mangle]

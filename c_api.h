@@ -131,6 +131,8 @@ void builder_i_discard(FunctionBuilderRef builder);
 
 void builder_i_return(FunctionBuilderRef builder);
 
+void builder_i_fail(FunctionBuilderRef builder);
+
 void builder_i_ftoi(FunctionBuilderRef builder, TypeRef int_type);
 
 void builder_i_iconv(FunctionBuilderRef builder, TypeRef int_type);

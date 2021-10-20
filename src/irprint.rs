@@ -141,6 +141,7 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             InstrK::MemoryGrow => write!(w, "memory.grow"),
             InstrK::LdGlobal(name) => write!(w, "ld.global \"{}\"", name),
             InstrK::StGlobal(name) => write!(w, "st.global \"{}\"", name),
+            InstrK::Fail => write!(w, "fail"),
             InstrK::Intrinsic(_) => write!(w, "intrinsic ?"), // TODO
         }?;
 

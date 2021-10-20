@@ -54,7 +54,7 @@ pub enum IrToken {
     Identifier,
     #[token("=")]
     Equals,
-    #[regex(r"[ \n\t\f]+", logos::skip)]
+    #[regex(r"[ \n\r\t\f]+", logos::skip)]
     #[error]
     Error,
 }
@@ -252,6 +252,7 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
                 let name = self.expect(IrToken::String)?.strip('"').to_owned();
                 Instr::new(InstrK::StGlobal(name))
             }
+            "fail" => Instr::new(InstrK::Fail),
             _ => return Err(IrParseError::InvalidInstructionName)
         };
         Ok(i)

@@ -290,6 +290,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::StGlobal(name) => {
                     out_f.instruction(&wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx() as u32));
                 }
+                InstrK::Fail => { out_f.instruction(&wasm::Instruction::Unreachable); }
                 InstrK::Intrinsic(_i) => {
                     // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types
                     unimplemented!()

@@ -102,6 +102,16 @@ pub enum InstrK<'ctx> {
     LdGlobal(String),
     /// Pop a value off the stack and store it into a global
     StGlobal(String),
+    /// Fail.
+    ///
+    /// This instruction is always assumed to produce stack values
+    /// valid for the current context.
+    ///
+    /// On WebAssembly, this instruction traps.
+    ///
+    /// All instructions in a block following this one
+    /// are considered unreachable and will be removed.
+    Fail,
     /// An intrinsic is a private instruction used for analysis, optimization etc.
     Intrinsic(Intrinsic<'ctx>)
 }

@@ -439,7 +439,12 @@ impl<'ctx> Verifier {
                             reason: "StGlobal instruction"
                         })
                     }
-                },
+                }
+                InstrK::Fail => {
+                    // This instruction stops execution so anything
+                    // after it is ignored
+                    return Ok(())
+                }
                 InstrK::Intrinsic(_) => {
                     // As of now, all intrinsics are inserted with optimizations
                     // therefore they're not present at verification
