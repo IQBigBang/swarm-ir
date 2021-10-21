@@ -445,6 +445,18 @@ impl<'ctx> Verifier {
                     // after it is ignored
                     return Ok(())
                 }
+                InstrK::Loop(body) => {
+                    // Verify that the body block's type is () -> ()
+                    let body_block_returns = function.get_block(*body)
+                        .ok_or(VerifyError::InvalidBlockId)?.returns();
+                    if !body_block_returns.is_empty() {
+                        return Err(VerifyError::InvalidBlockType {
+                            block: *body,
+                            expected: vec![],
+                            actual: body_block_returns.clone()
+                        })
+                    }
+                }
                 InstrK::Intrinsic(_) => {
                     // As of now, all intrinsics are inserted with optimizations
                     // therefore they're not present at verification

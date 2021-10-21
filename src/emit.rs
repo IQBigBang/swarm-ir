@@ -291,6 +291,19 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     out_f.instruction(&wasm::Instruction::GlobalSet(module.get_global(name).unwrap().idx() as u32));
                 }
                 InstrK::Fail => { out_f.instruction(&wasm::Instruction::Unreachable); }
+                InstrK::Loop(body) => {
+                    // The loop body's type is always () -> ()
+                    debug_assert!(function.get_block(*body).unwrap().returns().is_empty());
+                    let body_block_type = wasm::BlockType::Empty;
+                    // We emit (block (loop <body> br 0))
+                    out_f.instruction(&wasm::Instruction::Block(body_block_type));
+                    out_f.instruction(&wasm::Instruction::Loop(body_block_type));
+                    self.compile_block(module, function, function.get_block(*body).unwrap(), out_f);
+                    // This `br 0` is what ensures the looping
+                    out_f.instruction(&wasm::Instruction::Br(0));
+                    out_f.instruction(&wasm::Instruction::End);
+                    out_f.instruction(&wasm::Instruction::End);
+                }
                 InstrK::Intrinsic(_i) => {
                     // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types
                     unimplemented!()

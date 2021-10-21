@@ -1,0 +1,14 @@
+func "f" () -> int32 {
+locals:
+    #0  int32
+
+b0: () -> int32 tag=main
+    loop b1
+    ld.loc #0
+
+b1: () -> () tag=loop
+    ld.loc #0
+    ld.int32 1
+    iadd
+    st.loc #0
+}

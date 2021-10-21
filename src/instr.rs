@@ -112,6 +112,10 @@ pub enum InstrK<'ctx> {
     /// All instructions in a block following this one
     /// are considered unreachable and will be removed.
     Fail,
+    /// Repeatedly execute a block of code.
+    /// 
+    /// The block must have a void type ([] -> [])
+    Loop(BlockId),
     /// An intrinsic is a private instruction used for analysis, optimization etc.
     Intrinsic(Intrinsic<'ctx>)
 }

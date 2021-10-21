@@ -85,6 +85,10 @@ impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
                            self.assert_tag(BlockTag::IfElse, else_block, function)?;
                         }
                    }
+                   InstrK::Loop(child) => {
+                        self.assert_parent(&mut block_parents, child, this_block)?;
+                        self.assert_tag(BlockTag::Loop, child, function)?;
+                   }
                    _ => {} // ignore other instructions
                 }
             }

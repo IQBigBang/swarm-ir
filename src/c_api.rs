@@ -350,6 +350,11 @@ pub unsafe extern "C" fn builder_i_st_global(builder: FunctionBuilderRef, name: 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn builder_i_loop(builder: FunctionBuilderRef, body_block: BlockId) { 
+    (builder as *mut FunctionBuilder).as_mut().unwrap().i_loop(body_block) 
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn compile_full_module(module: ModuleRef, opt: bool, out_len: *mut usize) -> *const u8 {
     let result = catch_unwind(|| {
         crate::pipeline_compile_module_to_wasm(take(module as *mut Module), opt)

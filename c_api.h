@@ -167,4 +167,6 @@ void builder_i_ld_global(FunctionBuilderRef builder, const int8_t *name);
 
 void builder_i_st_global(FunctionBuilderRef builder, const int8_t *name);
 
+void builder_i_loop(FunctionBuilderRef builder, BlockId body_block);
+
 const uint8_t *compile_full_module(ModuleRef module, bool opt, uintptr_t *out_len);
