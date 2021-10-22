@@ -55,7 +55,9 @@ pub enum InstrK<'ctx> {
     CallDirect { func_name: String },
     /// Load the value of a local onto the stack
     LdLocal { idx: usize },
-    /// Store the value on top of the stack into a local
+    /// Store the value on top of the stack into a local.
+    /// 
+    /// The local must not be an argument, as argument locals are immutable
     StLocal { idx: usize },
     /// Load a pointer to a global function onto the stack
     LdGlobalFunc { func_name: String },
@@ -356,5 +358,10 @@ impl<'ctx> Function<'ctx> {
 
     pub fn ret_count(&self) -> usize {
         self.ret_tys().len()
+    }
+
+    /// Returns true if the Nth local is actually an argument to the function
+    pub fn is_local_an_arg(&self, n: usize) -> bool {
+        n < self.arg_count()
     }
 }

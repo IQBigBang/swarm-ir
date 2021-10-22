@@ -216,6 +216,12 @@ impl<'ctx> Verifier {
                             reason: "Local store"
                         })
                     }
+                    // Arguments cannot be mutated
+                    if function.is_local_an_arg(*idx) {
+                        return Err(VerifyError::ArgumentStore {
+                            idx: *idx
+                        })
+                    }
                 },
                 InstrK::LdGlobalFunc { func_name } => {
                     match module.get_function(func_name) {
@@ -594,4 +600,5 @@ pub enum VerifyError<'ctx> {
     UndefinedGlobal { name: String },
     IntegerSizeMismatch { left: Ty<'ctx>, right: Ty<'ctx>},
     ConstIntOverflow { value: u32, ty: Ty<'ctx> },
+    ArgumentStore { idx: usize }
 }
