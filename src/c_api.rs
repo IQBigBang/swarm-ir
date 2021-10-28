@@ -255,6 +255,7 @@ argless_instr!(
     builder_i_discard : i_discard
     builder_i_return : i_return
     builder_i_fail : i_fail
+    builder_i_break : i_break
 );
 
 #[no_mangle]

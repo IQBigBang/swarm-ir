@@ -143,6 +143,7 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             InstrK::StGlobal(name) => write!(w, "st.global \"{}\"", name),
             InstrK::Fail => write!(w, "fail"),
             InstrK::Loop(body) => write!(w, "loop b{}", body.id()),
+            InstrK::Break => write!(w, "break"),
             InstrK::Intrinsic(_) => write!(w, "intrinsic ?"), // TODO
         }?;
 

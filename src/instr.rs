@@ -118,6 +118,8 @@ pub enum InstrK<'ctx> {
     /// 
     /// The block must have a void type ([] -> [])
     Loop(BlockId),
+    /// Break from the innermost loop.
+    Break,
     /// An intrinsic is a private instruction used for analysis, optimization etc.
     Intrinsic(Intrinsic<'ctx>)
 }

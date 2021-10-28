@@ -167,7 +167,9 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 InstrK::IfElse { then, r#else } => {
                     let block = function.get_block(*then).unwrap();
                     let block_type = 
-                        if block.returns().len() == 1 {
+                        if block.returns().is_empty() {
+                            wasm::BlockType::Empty
+                        } else if block.returns().len() == 1 {
                             // If the block returns only a single value, prefer
                             // to compile it as returning that one value
                             // rather than a function type
@@ -303,6 +305,12 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     out_f.instruction(&wasm::Instruction::Br(0));
                     out_f.instruction(&wasm::Instruction::End);
                     out_f.instruction(&wasm::Instruction::End);
+                }
+                InstrK::Break => {
+                    // Per the ControlFlow2 proposal, `Break` compiles to
+                    // br(innermost_loop_distance_of_this_block + 1)
+                    let ilp: usize = block.meta.retrieve_copied(key!("innermost_loop_distance")).unwrap();
+                    out_f.instruction(&wasm::Instruction::Br((ilp + 1) as u32));
                 }
                 InstrK::Intrinsic(_i) => {
                     // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types

@@ -153,6 +153,7 @@ pub trait InstrBuilder<'ctx> {
     fn i_st_global(&mut self, name: String) { self.instr(InstrK::StGlobal(name)) }
     fn i_fail(&mut self) { self.instr(InstrK::Fail) }
     fn i_loop(&mut self, body_block: BlockId) { self.instr(InstrK::Loop(body_block)) }
+    fn i_break(&mut self) { self.instr(InstrK::Break) }
 }
 
 /// A wrapper which acts as a reference to a local.

@@ -257,6 +257,7 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
                 let body = self.parse_block_id()?;
                 Instr::new(InstrK::Loop(body))
             }
+            "break" => Instr::new(InstrK::Break),
             _ => return Err(IrParseError::InvalidInstructionName)
         };
         Ok(i)

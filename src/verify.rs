@@ -463,6 +463,16 @@ impl<'ctx> Verifier {
                         })
                     }
                 }
+                InstrK::Break => {
+                    // The Verifier runs AFTER the CF-Verifier
+                    // therefore the innermost_loop metadata should be present.
+                    // Verify that this block HAS the metadata, in other words,
+                    // that it's part of SOME loop
+                    // because it's invalid to use `Break` without a `Loop`
+                    if block.meta.retrieve::<usize>(key!("innermost_loop_distance")).is_none() {
+                        return Err(VerifyError::BreakWithoutLoop)
+                    }
+                }
                 InstrK::Intrinsic(_) => {
                     // As of now, all intrinsics are inserted with optimizations
                     // therefore they're not present at verification
@@ -600,5 +610,6 @@ pub enum VerifyError<'ctx> {
     UndefinedGlobal { name: String },
     IntegerSizeMismatch { left: Ty<'ctx>, right: Ty<'ctx>},
     ConstIntOverflow { value: u32, ty: Ty<'ctx> },
-    ArgumentStore { idx: usize }
+    ArgumentStore { idx: usize },
+    BreakWithoutLoop
 }
