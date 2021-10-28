@@ -269,3 +269,9 @@ impl<'ctx> IRPrint for FuncDef<'ctx> {
         }
     }
 }
+
+impl IRPrint for usize {
+    fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
+        write!(w, "{}", self)
+    }
+}

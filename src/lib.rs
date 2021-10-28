@@ -20,6 +20,16 @@ pub mod intrinsic;
 pub mod irparse;
 pub mod numerics;
 
+/// Run the standard pipeline of passes on an IR module
+/// with the exception of the last pass - the compilation.
+/// 
+/// Panics if any kind of error during verification occurs
+pub fn pipeline_verify_module(module: &mut module::Module<'_>) {
+    module.do_mut_pass(&mut correct::CorrectionPass{}).unwrap();
+    module.do_mut_pass(&mut cf_verify::ControlFlowVerifier{}).unwrap();
+    module.do_mut_pass(&mut verify::Verifier{}).unwrap();
+}
+
 /// Compile an IR Module to WebAssembly with the default
 /// preferred pipeline.
 ///

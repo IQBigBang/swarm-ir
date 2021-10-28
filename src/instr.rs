@@ -170,6 +170,8 @@ impl BlockId {
     pub fn id(&self) -> usize {
         self.0
     }
+
+    pub fn entry_block_id() -> Self { Self(0) }
 }
 
 impl From<usize> for BlockId {
