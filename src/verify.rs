@@ -446,11 +446,7 @@ impl<'ctx> Verifier {
                         })
                     }
                 }
-                InstrK::Fail => {
-                    // This instruction stops execution so anything
-                    // after it is ignored
-                    return Ok(())
-                }
+                InstrK::Fail => {}
                 InstrK::Loop(body) => {
                     // Verify that the body block's type is () -> ()
                     let body_block_returns = function.get_block(*body)
@@ -478,6 +474,11 @@ impl<'ctx> Verifier {
                     // therefore they're not present at verification
                     unreachable!()
                 }
+            }
+            if instr.is_diverging() {
+                // Diverging instructions stop execution so 
+                // anything after it is ignored
+                return Ok(())
             }
         }
 

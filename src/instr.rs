@@ -161,6 +161,13 @@ impl<'ctx> Instr<'ctx> {
     pub fn is_load(&self) -> bool {
         matches!(self.kind, InstrK::LdInt(_, _) | InstrK::LdFloat(_) | InstrK::LdLocal { idx: _ } | InstrK::LdGlobalFunc { func_name: _ })
     }
+
+    /// Return true if this instruction is a "diverging" instruction.
+    /// 
+    /// Namely this includes Return, Fail and Break
+    pub fn is_diverging(&self) -> bool {
+        matches!(self.kind, InstrK::Return | InstrK::Fail | InstrK::Break)
+    }
 }
 
 #[repr(transparent)]
