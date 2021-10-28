@@ -7,6 +7,9 @@
 //! i.e. there's no goto-ish jumps
 //!
 //! It also checks that the [`BlockTag`]s are correct
+//! 
+//! Calculates the innermost-loop-distances as described
+//! in the Control Flow part 2 proposal
 
 use std::collections::HashMap;
 
@@ -51,7 +54,7 @@ impl ControlFlowVerifier {
 impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
     type Error = ControlFlowVerifierError;
     // the parent blocks for every block
-    type MutationInfo = HashMap<BlockId, BlockId>;
+    type MutationInfo = ControlFlowVerifierData;
 
 
     fn visit_function(
@@ -103,24 +106,70 @@ impl<'ctx> MutableFunctionPass<'ctx> for ControlFlowVerifier {
             })
         }
 
-        Ok(block_parents)
+        // Now that we know the parents, calculate the innermost loop distances
+        let mut innermost_loop_distances: HashMap<BlockId, usize> = HashMap::new();
+        for block in function.blocks_iter() {
+            match block.tag() {
+                BlockTag::Undefined | BlockTag::Main => continue,
+                BlockTag::Loop => {
+                    // For `Loop`, the innermost_loop_distance is zero
+                    innermost_loop_distances.insert(block.idx, 0usize);
+                },
+                BlockTag::IfElse => {
+                    // For `IfElse`, search though the parents until we find a `Loop` block
+                    let mut innermost_loop_distance: isize = 1;
+                    let mut current_block = block.idx;
+                    loop {
+                        let parent = block_parents[&current_block];
+                        match function.get_block(parent).unwrap().tag {
+                            BlockTag::Undefined | BlockTag::Main => {
+                                // The IfElse block is not a part of any kind of loop
+                                // because none of its parents is a loop
+                                innermost_loop_distance = -1;
+                                break
+                            },
+                            BlockTag::IfElse => {
+                                innermost_loop_distance += 1;
+                            },
+                            // We found the nearest loop
+                            BlockTag::Loop => break,
+                        }
+                        current_block = parent;
+                    }
+                    if innermost_loop_distance > 0 {
+                        innermost_loop_distances.insert(block.idx, innermost_loop_distance as usize);
+                    }
+                }
+            }
+        }
+
+        Ok(ControlFlowVerifierData { block_parents, innermost_loop_distances } )
     }
 
     fn mutate_function(
         &mut self,
         function: &mut crate::instr::Function<'ctx>,
         info: Self::MutationInfo) -> Result<(), Self::Error> {
-        
-        let block_parents = info;
-        
+                
         for block in function.blocks_iter_mut() {
-            if block_parents.contains_key(&block.idx) {
-                block.meta.insert(key!("parent"), block_parents[&block.idx]);
+            if info.block_parents.contains_key(&block.idx) {
+                block.meta.insert(key!("parent"), info.block_parents[&block.idx]);
             }
+
+            if info.innermost_loop_distances.contains_key(&block.idx) {
+                block.meta.insert(
+                    key!("innermost_loop_distance"), 
+                    info.innermost_loop_distances[&block.idx]);
+            } 
         }
 
         Ok(())
     }
+}
+
+pub struct ControlFlowVerifierData {
+    block_parents: HashMap<BlockId, BlockId>,
+    innermost_loop_distances: HashMap<BlockId, usize>,
 }
 
 #[derive(Debug)]

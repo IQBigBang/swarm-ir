@@ -12,7 +12,8 @@ macro_rules! key {
     ("ty") => { crate::metadata::Key(0) };
     ("from") => { crate::metadata::Key(1) };
     ("parent") => { crate::metadata::Key(2) };
-    ("bws") => { crate::metadata::Key(3) }
+    ("bws") => { crate::metadata::Key(3) };
+    ("innermost_loop_distance") => { crate::metadata::Key(4) };
 }
 
 // The opposite of the macro
@@ -23,6 +24,7 @@ impl From<&Key> for &'static str {
             1 => "from",
             2 => "parent",
             3 => "bws",
+            4 => "innermost_loop_distance",
             _ => unreachable!()
         }
     }
@@ -195,12 +197,6 @@ mod tests {
     use crate::{irprint::IRPrint, module::{Module, WasmModuleConf}, ty::Type, ty::Ty};
 
     use super::Metadata;
-
-    impl IRPrint for usize {
-        fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
-            write!(w, "{}", self)
-        }
-    }
 
     impl IRPrint for String {
         fn ir_print(&self, w: &mut dyn std::fmt::Write) -> std::fmt::Result {
