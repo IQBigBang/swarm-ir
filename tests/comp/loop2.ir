@@ -1,0 +1,35 @@
+func "f" (int32) -> int32 {
+locals:
+    #0  int32
+    #1  int32
+    #2  int32
+
+b0: () -> int32 tag=main
+    ld.int32 0
+    st.loc #1
+    ld.int32 0
+    st.loc #2
+
+    loop b1
+    ld.loc #1
+
+b1: () -> () tag=loop
+    ld.loc #2
+    ld.loc #0
+    icmp.ge
+    if then b2
+
+    ld.loc #1
+    ld.int32 2
+    iadd
+    st.loc #1
+    
+    ld.loc #2
+    ld.int32 1
+    iadd
+    st.loc #2
+
+
+b2: () -> () tag=if_else
+    break
+}
