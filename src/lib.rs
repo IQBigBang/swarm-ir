@@ -19,6 +19,7 @@ pub mod intrinsic;
 #[cfg(feature = "ir-parse")]
 pub mod irparse;
 pub mod numerics;
+pub mod staticmem;
 
 /// Run the standard pipeline of passes on an IR module
 /// with the exception of the last pass - the compilation.

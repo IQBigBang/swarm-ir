@@ -23,6 +23,8 @@ pub trait Abi {
     /// Return an offset at which the Nth field
     /// starts inside a struct
     fn struct_field_offset(struct_fields: &[Ty<'_>], field_n: usize) -> usize;
+
+    fn is_little_endian() -> bool;
 }
 
 pub struct Wasm32Abi {}
@@ -76,6 +78,8 @@ impl Abi for Wasm32Abi {
         // TODO: cache the results of the struct_calc algorithm, so we don't need to recalculate it every time
         struct_calc_algorithm::<Self>(struct_fields).0[field_n]
     }
+
+    fn is_little_endian() -> bool { true }
 }
 
 /// The algorithm for calculating struct paddings, size and alignment
@@ -113,7 +117,7 @@ mod tests {
     #[test]
     pub fn struct_test() {
         // TODO: add more tests
-        let mut m = Module::default();
+        let m = Module::default();
 
         let struct_t1 = m.intern_type(Type::Struct { fields: vec![
             m.int16t(), /*2-byte padding */ m.int32t(), m.int8t(), m.uint8t()
