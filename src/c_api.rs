@@ -37,7 +37,7 @@ pub type ModuleRef = *mut ();
 
 #[no_mangle]
 pub extern "C" fn create_module() -> ModuleRef {
-    c_alloc(Module::new(WasmModuleConf::default()))
+    c_alloc(Module::default())
 }
 
 #[no_mangle]

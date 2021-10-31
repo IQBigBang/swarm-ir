@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn metadata_ty_test() {
-        let mut m = Module::new(WasmModuleConf::default());
+        let mut m = Module::default();
         let mut meta = Metadata::new();
 
         meta.insert_ty("int", m.int32t());

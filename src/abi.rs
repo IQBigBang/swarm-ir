@@ -113,7 +113,7 @@ mod tests {
     #[test]
     pub fn struct_test() {
         // TODO: add more tests
-        let mut m = Module::new(WasmModuleConf::default());
+        let mut m = Module::default();
 
         let struct_t1 = m.intern_type(Type::Struct { fields: vec![
             m.int16t(), /*2-byte padding */ m.int32t(), m.int8t(), m.uint8t()

@@ -52,7 +52,7 @@ fn generate_test_function(w: &mut impl Write, test_name: &str, ir_input: &str, w
     write!(w, r#"
 #[test]
 pub fn {}() {{
-    let mut m = Module::new(WasmModuleConf::default());
+    let mut m = Module::default();
     let f = {{
         let mut p = IRParser::new(&mut m, "{}");
         p.parse_function().unwrap()

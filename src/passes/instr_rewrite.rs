@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     pub fn instr_rewrite_pass_test() {
-        let mut top = Module::new(WasmModuleConf::default());
+        let mut top = Module::default();
 
         let mut builder = FunctionBuilder::new(
             "func".to_string(),

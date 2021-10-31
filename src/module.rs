@@ -45,6 +45,12 @@ struct PrimitiveTypeCache<'ctx> {
     uint8: Ty<'ctx>,
 }
 
+impl Default for Module<'_> {
+    fn default() -> Self {
+        Self::new(WasmModuleConf::default())
+    }
+}
+
 impl<'ctx> Module<'ctx> {
     pub fn new(wasm_module_conf: WasmModuleConf) -> Self {
         let mut type_ctx = Interner::new();
