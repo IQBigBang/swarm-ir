@@ -147,6 +147,7 @@ impl<'ctx> IRPrint for Instr<'ctx> {
             InstrK::Fail => write!(w, "fail"),
             InstrK::Loop(body) => write!(w, "loop b{}", body.id()),
             InstrK::Break => write!(w, "break"),
+            InstrK::LdStaticMemPtr(_) => unimplemented!(), // FIXME (also fix in irparse)
             InstrK::Intrinsic(_) => write!(w, "intrinsic ?"), // TODO
         }?;
 

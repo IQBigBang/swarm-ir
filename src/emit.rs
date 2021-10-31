@@ -2,12 +2,14 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, staticmem::CompiledStaticMemory, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, staticmem::{CompiledStaticMemory, SMItemRef}, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
     /// A table of function types and their indexes in the resulting wasm module
     function_types: HashMap<Ty<'ctx>, u32>,
+    /// Memory addresses of items in static memory
+    static_memory_addresses: HashMap<SMItemRef, usize>,
 
     /* Follow the sections. Because the Wasm specification requires a certain order,
     the sections are saved separately and only combined into the module file at the very end */
@@ -44,6 +46,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         WasmEmitter {
             module: wasm::Module::new(),
             function_types: HashMap::new(),
+            static_memory_addresses: HashMap::new(),
 
             type_sec: wasm::TypeSection::new(),
             import_sec: wasm::ImportSection::new(),
@@ -329,6 +332,10 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     let ilp: usize = block.meta.retrieve_copied(key!("innermost_loop_distance")).unwrap();
                     out_f.instruction(&wasm::Instruction::Br((ilp + 1) as u32));
                 }
+                InstrK::LdStaticMemPtr(item) => {
+                    out_f.instruction(&wasm::Instruction::I32Const(
+                        self.static_memory_addresses[item] as i32));
+                }
                 InstrK::Intrinsic(_i) => {
                     // TODO: alter the ReadAtOffset and WriteAtOffset instruction to work with other integral types
                     unimplemented!()
@@ -413,6 +420,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 0, 
                 &wasm::Instruction::I32Const(0), // no offset
                 compiled_mem.buf);
+            // Assign the addresses
+            self.static_memory_addresses = compiled_mem.addresses;
         }
     }
 

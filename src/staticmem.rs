@@ -65,7 +65,7 @@ pub enum SMValue {
     PtrTo(SMItemRef),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[repr(transparent)]
 pub struct SMItemRef(usize);
 

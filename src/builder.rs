@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, metadata::Metadata, module::Module, ty::{Ty, Type}};
+use crate::{instr::{BlockId, BlockTag, Cmp, Function, Instr, InstrBlock, InstrK}, metadata::Metadata, module::Module, staticmem::SMItemRef, ty::{Ty, Type}};
 
 pub struct FunctionBuilder<'ctx> {
     blocks: HashMap<BlockId, (Vec<Ty<'ctx>>, Vec<Instr<'ctx>>, BlockTag)>,
@@ -157,6 +157,7 @@ pub trait InstrBuilder<'ctx> {
     fn i_fail(&mut self) { self.instr(InstrK::Fail) }
     fn i_loop(&mut self, body_block: BlockId) { self.instr(InstrK::Loop(body_block)) }
     fn i_break(&mut self) { self.instr(InstrK::Break) }
+    fn i_ld_static_mem_ptr(&mut self, item: SMItemRef) { self.instr(InstrK::LdStaticMemPtr(item)) }
 }
 
 /// A wrapper which acts as a reference to a local.

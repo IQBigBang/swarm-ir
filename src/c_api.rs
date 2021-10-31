@@ -3,7 +3,7 @@
 
 use std::{ffi::CStr, panic::catch_unwind, ptr::null};
 
-use crate::{builder::{self, FunctionBuilder, InstrBuilder}, instr::{self, BlockTag, Cmp}, irprint::IRPrint, module::{ExternFunction, Module, WasmModuleConf}, ty::{Ty, Type}};
+use crate::{builder::{self, FunctionBuilder, InstrBuilder}, instr::{self, BlockTag, Cmp}, irprint::IRPrint, module::{ExternFunction, Module, WasmModuleConf}, staticmem::{Mutability, SMItem, SMItemRef}, ty::{Ty, Type}};
 
 #[inline]
 fn c_alloc<T>(x: T) -> *mut () { Box::leak(Box::new(x)) as *mut T as *mut () }
@@ -161,6 +161,24 @@ pub unsafe extern "C" fn module_new_extern_function(
     (module as *mut Module).as_mut().unwrap().add_extern_function(ExternFunction::new(
         func_name, func_ty
     ))
+}
+
+/// Add a blob of data into the static memory of the module
+#[no_mangle]
+pub unsafe extern "C" fn module_new_static_memory_blob(
+    module: ModuleRef,
+    blob_ptr: *const u8,
+    blob_len: usize,
+    mutable: bool,
+) -> SMItemRef {
+    let blob = slice_of(blob_ptr, blob_len);
+    (module as *mut Module).as_mut().unwrap().add_static_mem_item(
+        SMItem {
+            value: crate::staticmem::SMValue::Blob(blob.to_vec().into_boxed_slice()),
+            mutability: if mutable { Mutability::Mut } else { Mutability::Const },
+            unique: true
+        }
+    )
 }
 
 pub type FunctionBuilderRef = *mut ();
@@ -356,6 +374,11 @@ pub unsafe extern "C" fn builder_i_st_global(builder: FunctionBuilderRef, name: 
 #[no_mangle]
 pub unsafe extern "C" fn builder_i_loop(builder: FunctionBuilderRef, body_block: BlockId) { 
     (builder as *mut FunctionBuilder).as_mut().unwrap().i_loop(body_block) 
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn builder_i_ld_static_mem_ptr(builder: FunctionBuilderRef, static_mem_item: SMItemRef) { 
+    (builder as *mut FunctionBuilder).as_mut().unwrap().i_ld_static_mem_ptr(static_mem_item) 
 }
 
 #[no_mangle]

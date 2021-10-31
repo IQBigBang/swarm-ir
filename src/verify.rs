@@ -506,6 +506,9 @@ impl<'ctx> Verifier {
                         return Err(VerifyError::BreakWithoutLoop)
                     }
                 }
+                InstrK::LdStaticMemPtr(_) => {
+                    stack.push(module.ptr_t())
+                }
                 InstrK::Intrinsic(_) => {
                     // As of now, all intrinsics are inserted with optimizations
                     // therefore they're not present at verification

@@ -35,6 +35,8 @@ typedef void *ModuleRef;
 
 typedef const void *TypeRef;
 
+typedef uintptr_t SMItemRef;
+
 typedef void *FunctionBuilderRef;
 
 /**
@@ -81,6 +83,14 @@ void module_new_float_global(ModuleRef module, const int8_t *global_name, float 
 void module_new_extern_function(ModuleRef module,
                                 const int8_t *function_name,
                                 TypeRef function_type);
+
+/**
+ * Add a blob of data into the static memory of the module
+ */
+SMItemRef module_new_static_memory_blob(ModuleRef module,
+                                        const uint8_t *blob_ptr,
+                                        uintptr_t blob_len,
+                                        bool mutable_);
 
 FunctionBuilderRef create_function_builder(const int8_t *function_name, TypeRef function_type);
 
@@ -176,5 +186,7 @@ void builder_i_ld_global(FunctionBuilderRef builder, const int8_t *name);
 void builder_i_st_global(FunctionBuilderRef builder, const int8_t *name);
 
 void builder_i_loop(FunctionBuilderRef builder, BlockId body_block);
+
+void builder_i_ld_static_mem_ptr(FunctionBuilderRef builder, SMItemRef static_mem_item);
 
 const uint8_t *compile_full_module(ModuleRef module, bool opt, uintptr_t *out_len);

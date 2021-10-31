@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hint::unreachable_unchecked};
 
-use crate::{intrinsic::{Intrinsic, Intrinsics}, metadata::{Key, Metadata}, ty::{Ty, Type}};
+use crate::{intrinsic::{Intrinsic, Intrinsics}, metadata::{Key, Metadata}, staticmem::SMItemRef, ty::{Ty, Type}};
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum InstrK<'ctx> {
@@ -127,6 +127,9 @@ pub enum InstrK<'ctx> {
     Loop(BlockId),
     /// Break from the innermost loop.
     Break,
+    /// Load a pointer to an item in static memory.
+    /// Returns type [`ptr`].
+    LdStaticMemPtr(SMItemRef),
     /// An intrinsic is a private instruction used for analysis, optimization etc.
     Intrinsic(Intrinsic<'ctx>)
 }
