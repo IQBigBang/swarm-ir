@@ -111,7 +111,7 @@ impl<'ctx, K: MetadataKey> Metadata<'ctx, K> {
         self.0 = Some(Box::new(first));
     }
 
-    fn find_value<'a>(node: &'a MetadataNode<K>, key: K) -> Option<&'a dyn MetadataRequiredTraits> {
+    fn find_value(node: &MetadataNode<K>, key: K) -> Option<&'_ dyn MetadataRequiredTraits> {
         let mut current = node;
         loop {
             if current.key.eq(key) {

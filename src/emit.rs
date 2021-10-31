@@ -54,7 +54,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
     }
 
     fn encode_types(&mut self, module: &Module<'ctx>) {
-        for ty in module.all_types_iter() {
+        module.for_all_types_iter(|ty| {
             if let Type::Func { args, ret } = &*ty {
                 self.type_sec.function(
                     args.iter().map(|t| A::compile_type(*t)),
@@ -64,7 +64,7 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                 let idx = self.type_sec.len() - 1;
                 self.function_types.insert(ty, idx);
             }
-        }
+        })
     }
 
     fn compile_func(&mut self, module: &Module<'ctx>, func: &Function<'ctx>) {

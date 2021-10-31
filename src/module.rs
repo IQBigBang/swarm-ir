@@ -1,3 +1,5 @@
+use std::cell::{RefCell};
+
 use indexmap::IndexMap;
 use libintern::Interner;
 
@@ -7,7 +9,7 @@ pub struct Module<'ctx> {
     // this is not true anymore:
     // The type context is ref-celled mainly for reasons of simplicity
     // to allow interning a type while e.g. modifying a function
-    type_ctx: Interner<'ctx, Type<'ctx>>,
+    type_ctx: RefCell<Interner<'ctx, Type<'ctx>>>,
     // IndexMap ensures the functions (and globals) have a constant index (ordering)
     functions: IndexMap<String, FuncDef<'ctx>>,
     globals: IndexMap<String, Global<'ctx>>,
@@ -65,7 +67,7 @@ impl<'ctx> Module<'ctx> {
             uint8: type_ctx.intern(Type::UInt8),
         };
         Module {
-            type_ctx/*: RefCell::new(type_ctx)*/,
+            type_ctx: RefCell::new(type_ctx),
             functions: IndexMap::new(),
             globals: IndexMap::new(),
             primitive_types_cache: cache,
@@ -73,12 +75,14 @@ impl<'ctx> Module<'ctx> {
         }
     }
 
-    pub fn intern_type(&mut self, ty: Type<'ctx>) -> Ty<'ctx> {
-        self.type_ctx/*.borrow_mut()*/.intern(ty)
+    pub fn intern_type(&self, ty: Type<'ctx>) -> Ty<'ctx> {
+        self.type_ctx.borrow_mut().intern(ty)
     }
 
-    pub fn all_types_iter<'a>(&'a self) -> libintern::Iter<'a, 'ctx, Type<'ctx>> {
-        self.type_ctx.iter()
+    pub fn for_all_types_iter(&self, mut f: impl FnMut(Ty<'ctx>))  {
+        for t in self.type_ctx.borrow().iter() {
+            f(t)
+        }
     }
 
     pub fn add_function(&mut self, mut function: Function<'ctx>) {
