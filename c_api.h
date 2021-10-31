@@ -121,6 +121,12 @@ void builder_i_fdiv(FunctionBuilderRef builder);
 
 void builder_i_itof(FunctionBuilderRef builder);
 
+void builder_i_not(FunctionBuilderRef builder);
+
+void builder_i_bitand(FunctionBuilderRef builder);
+
+void builder_i_bitor(FunctionBuilderRef builder);
+
 void builder_i_call_indirect(FunctionBuilderRef builder);
 
 void builder_i_memory_grow(FunctionBuilderRef builder);

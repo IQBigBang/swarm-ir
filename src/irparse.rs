@@ -174,6 +174,9 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
             "fcmp.le" => Instr::new(InstrK::FCmp(Cmp::Le)),
             "fcmp.gt" => Instr::new(InstrK::FCmp(Cmp::Gt)),
             "fcmp.ge" => Instr::new(InstrK::FCmp(Cmp::Ge)),
+            "not" => Instr::new(InstrK::Not),
+            "bitand" => Instr::new(InstrK::BitAnd),
+            "bitor" => Instr::new(InstrK::BitOr),
             "iconv" => {
                 let t = self.expect(IrToken::Identifier)?;
                 if t != "to" { return Err(IrParseError::MalformedIdentifier { got: t.to_owned() }) }
@@ -285,7 +288,7 @@ impl<'a, 'ctx> IRParser<'a, 'ctx> {
 
         // then parse the instructions
         fn is_block_id(s: &str) -> bool {
-            s.chars().nth(0) == Some('b')
+            s.starts_with('b')
             && s.chars().nth(1).map(|c| c.is_digit(10)).unwrap_or(false)
         }
     
@@ -405,7 +408,7 @@ trait StrHelper {
 impl<T: AsRef<str>> StrHelper for T {
     fn strip(&self, c: char) -> &str {
         let s = self.as_ref();
-        let strip_first = s.chars().nth(0) == Some(c);
+        let strip_first = s.starts_with(c);
         let strip_last = s.chars().nth_back(0) == Some(c);
         &s[(if strip_first {1} else {0}) .. (s.len() - if strip_last {1} else {0})]
     }

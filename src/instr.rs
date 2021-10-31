@@ -46,6 +46,13 @@ pub enum InstrK<'ctx> {
     ICmp(Cmp),
     /// Compare two floating-point values. The result is an integer.
     FCmp(Cmp),
+    /// A boolean not operation on integers.
+    /// Returns 1 if the value is 0 and 0 otherwise.
+    Not,
+    /// Bitwise and.
+    BitAnd,
+    /// Bitwise or.
+    BitOr,
     /// Convert an integer to another integer type.
     ///
     /// For precise semantics, see the *numerics* draft, which contains a detailed description

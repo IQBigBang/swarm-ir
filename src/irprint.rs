@@ -103,6 +103,9 @@ impl<'ctx> IRPrint for Instr<'ctx> {
                 write!(w, "iconv to ")?;
                 target.ir_print(w)
             }
+            InstrK::Not => write!(w, "not"),
+            InstrK::BitAnd => write!(w, "bitand"),
+            InstrK::BitOr => write!(w, "bitor"),
             InstrK::CallDirect { func_name } => write!(w, "call \"{}\"", func_name),
             InstrK::LdLocal { idx } => write!(w, "ld.loc #{}", idx),
             InstrK::StLocal { idx } => write!(w, "st.loc #{}", idx),

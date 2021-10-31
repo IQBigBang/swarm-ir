@@ -128,6 +128,16 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
                     Cmp::Gt => out_f.instruction(&wasm::Instruction::F32Gt),
                     Cmp::Ge => out_f.instruction(&wasm::Instruction::F32Ge),
                 }; }
+                InstrK::Not => {
+                    // !x is the same as (x == 0)
+                    out_f.instruction(&wasm::Instruction::I32Eqz);
+                }
+                InstrK::BitAnd => {
+                    out_f.instruction(&wasm::Instruction::I32And);
+                }
+                InstrK::BitOr => {
+                    out_f.instruction(&wasm::Instruction::I32Or);
+                }
                 InstrK::CallDirect { func_name } => {
                     let func_idx = module.get_function(func_name).unwrap().idx();
                     out_f.instruction(&wasm::Instruction::Call(func_idx.try_into().unwrap()));

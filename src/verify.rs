@@ -180,6 +180,43 @@ impl<'ctx> Verifier {
                     out_info.numeric_instrs_data.insert((block.idx, i), type_to_bws(val).unwrap());
                     stack.push(*target)
                 }
+                InstrK::Not => {
+                    // int -> int
+                    let val = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    if !val.is_int() {
+                        return Err(VerifyError::InvalidType { 
+                            expected: module.int32t(),
+                            actual: val,
+                            reason: "Not instruction"
+                        })
+                    }
+                    stack.push(val)
+                }
+                InstrK::BitAnd | InstrK::BitOr => {
+                    // int, int -> int
+                    let lhs = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+                    let rhs = stack.pop().ok_or(VerifyError::StackUnderflow)?;
+
+                    if !lhs.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: if rhs.is_int() { rhs } else { module.int32t() /* default to i32 */ },
+                            actual: lhs,
+                            reason: "Integer bitwise operation"
+                        })
+                    } else if !rhs.is_int() {
+                        return Err(VerifyError::InvalidType {
+                            expected: if lhs.is_int() { lhs } else { module.int32t() /* default to i32 */ },
+                            actual: rhs,
+                            reason: "Integer bitwise operation"
+                        })
+                    }
+                    // Now they're both surely integers
+                    if !do_int_types_match(lhs, rhs) {
+                        return Err(VerifyError::IntegerSizeMismatch {left: lhs, right: rhs})
+                    }
+
+                    stack.push(lhs)
+                }
                 InstrK::CallDirect { func_name } => {
                     match module.get_function(func_name) {
                         None => return Err(VerifyError::UndefinedFunctionCall {

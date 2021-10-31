@@ -249,6 +249,9 @@ argless_instr!(
     builder_i_fmul : i_fmul
     builder_i_fdiv : i_fdiv
     builder_i_itof : i_itof
+    builder_i_not : i_not
+    builder_i_bitand : i_bitand
+    builder_i_bitor : i_bitor
     builder_i_call_indirect : i_call_indirect
     builder_i_memory_grow : i_memory_grow
     builder_i_memory_size : i_memory_size

@@ -130,6 +130,9 @@ pub trait InstrBuilder<'ctx> {
     fn i_iconv(&mut self, target: Ty<'ctx>) { self.instr(InstrK::IConv { target }) }
     fn i_icmp(&mut self, cmp: Cmp) { self.instr(InstrK::ICmp(cmp)) }
     fn i_fcmp(&mut self, cmp: Cmp) { self.instr(InstrK::FCmp(cmp)) }
+    fn i_not(&mut self) { self.instr(InstrK::Not) }
+    fn i_bitand(&mut self) { self.instr(InstrK::BitAnd) }
+    fn i_bitor(&mut self) { self.instr(InstrK::BitOr) }
     fn i_call(&mut self, func_name: String) { self.instr(InstrK::CallDirect { func_name }) }
     fn i_ld_local(&mut self, loc: LocalRef) { self.instr(InstrK::LdLocal { idx: loc.into() }) }
     fn i_st_local(&mut self, loc: LocalRef) { self.instr(InstrK::StLocal { idx: loc.into() }) }
