@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::TryInto, marker::PhantomData};
 
 use wasm_encoder as wasm;
 
-use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, ty::{Ty, Type}};
+use crate::{abi::Abi, instr::{Cmp, Function, InstrBlock, InstrK}, module::{FuncDef, Functional, Module}, numerics::{emit_numeric_instr, type_to_bws}, pass::FunctionPass, staticmem::CompiledStaticMemory, ty::{Ty, Type}};
 
 pub struct WasmEmitter<'ctx, A: Abi> {
     module: wasm::Module,
@@ -29,6 +29,11 @@ pub struct WasmEmitter<'ctx, A: Abi> {
     elem_sec: wasm::ElementSection,
     /// Defines the actual code of the functions
     code_sec: wasm::CodeSection,
+    /// Defines the data segments which initialize memory
+    data_sec: wasm::DataSection,
+    /// Defines the debug names of symbols.
+    // TODO: support this properly
+    name_sec: wasm::NameSection,
     _ph: PhantomData<A>
 }
 
@@ -49,6 +54,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
             export_sec: wasm::ExportSection::new(),
             elem_sec: wasm::ElementSection::new(),
             code_sec: wasm::CodeSection::new(),
+            data_sec: wasm::DataSection::new(),
+            name_sec: wasm::NameSection::new(),
             _ph: PhantomData
         }
     }
@@ -399,6 +406,16 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
         }
     }
 
+    pub fn compile_static_memory(&mut self, module: &Module<'ctx>) {
+        if let Some(mem) = module.get_static_memory() {
+            let compiled_mem = CompiledStaticMemory::compile::<A>(module, mem);
+            self.data_sec.active(
+                0, 
+                &wasm::Instruction::I32Const(0), // no offset
+                compiled_mem.buf);
+        }
+    }
+
     pub fn finish(mut self) -> Vec<u8> {
         // Emit the sections in correct order
         self.module
@@ -410,7 +427,9 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> WasmEmitter<'ctx, A> {
             .section(&self.global_sec)
             .section(&self.export_sec)
             .section(&self.elem_sec)
-            .section(&self.code_sec);
+            .section(&self.code_sec)
+            .section(&self.data_sec)
+            .section(&self.name_sec);
         self.module.finish()
     }
 }
@@ -424,6 +443,8 @@ impl<'ctx, A: Abi<BackendType = wasm::ValType>> FunctionPass<'ctx> for WasmEmitt
         self.encode_types(module);
         // emit globals' definitions
         self.emit_globals(module);
+        // compile the static memory - must happen after globals
+        self.compile_static_memory(module);
         // emit external (i.e. imported) definitions
         self.emit_externs(module);
         Ok(())

@@ -8,9 +8,7 @@ edition = "2018"
 
 [dependencies]
 libintern = "0.7"
-# FIXME: Once the version is bumped and the release contains PR #362, replace with proper dependency
-wasm-encoder = { git = "https://github.com/bytecodealliance/wasm-tools", version = "0.7" }
-# wasm-encoder = "0.7"
+wasm-encoder = "0.8"
 bit-set = "0.5"
 indexmap = "1.7"
 logos = { version = "0.12", optional = true }

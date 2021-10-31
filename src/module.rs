@@ -3,7 +3,7 @@ use std::cell::{RefCell};
 use indexmap::IndexMap;
 use libintern::Interner;
 
-use crate::{instr::Function, irprint::IRPrint, pass::{FunctionPass, MutableFunctionPass}, ty::{Ty, Type}};
+use crate::{instr::Function, irprint::IRPrint, pass::{FunctionPass, MutableFunctionPass}, staticmem::{SMItem, SMItemRef, StaticMemory}, ty::{Ty, Type}};
 
 pub struct Module<'ctx> {
     // this is not true anymore:
@@ -16,7 +16,9 @@ pub struct Module<'ctx> {
     /// We cache Ty<'ctx> of primitive types for faster access
     primitive_types_cache: PrimitiveTypeCache<'ctx>,
     /// Some configuration of the result webassembly module
-    pub conf: WasmModuleConf
+    pub conf: WasmModuleConf,
+    /// A module may or may not have static memory
+    static_mem: Option<StaticMemory>,
 }
 
 /// Configuration of the webassembly module
@@ -71,7 +73,8 @@ impl<'ctx> Module<'ctx> {
             functions: IndexMap::new(),
             globals: IndexMap::new(),
             primitive_types_cache: cache,
-            conf: wasm_module_conf
+            conf: wasm_module_conf,
+            static_mem: None
         }
     }
 
@@ -200,7 +203,7 @@ impl<'ctx> Module<'ctx> {
         self.globals.insert(g.name.clone(), g);
     }
 
-    pub fn globals_iter(&self) -> impl Iterator<Item = &Global<'ctx>> {
+    pub fn globals_iter(&self) -> impl Iterator<Item = &Global<'ctx>> + ExactSizeIterator {
         self.globals.values()
     }
 
@@ -226,6 +229,20 @@ impl<'ctx> Module<'ctx> {
         let cloned_name = function.name().to_owned();
         // save it
         self.functions.insert(cloned_name, FuncDef::Extern(function));
+    }
+
+    /// Add an item to the static memory of this module.
+    pub fn add_static_mem_item(&mut self, item: SMItem) -> SMItemRef {
+        self.static_mem.get_or_insert_with(StaticMemory::new)
+            .add_item(item)
+    }
+
+    pub fn lookup_static_mem_item(&self, re: SMItemRef) -> Option<&SMItem> {
+        self.static_mem.as_ref().map(|m| m.lookup_item(re))
+    }
+
+    pub(crate) fn get_static_memory(&self) -> Option<&StaticMemory> {
+        self.static_mem.as_ref()
     }
 }
 

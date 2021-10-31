@@ -13,7 +13,6 @@ pub struct StaticMemory {
 }
 
 impl StaticMemory {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self { items: vec![] }
     }
@@ -30,6 +29,8 @@ impl StaticMemory {
         &self.items[item_ref.0]
     }
 }
+
+impl Default for StaticMemory { fn default() -> Self { Self::new() } }
 
 /// A single item inside the static memory
 pub struct SMItem {
